@@ -8,11 +8,16 @@ android {
     compileSdk = 34
 
     defaultConfig {
+        val propVersionName = (project.findProperty("versionName") as String?)
+            ?.takeIf { it.isNotBlank() } ?: "1.0.0"
+        val propVersionCode = (project.findProperty("versionCode") as String?)
+            ?.toIntOrNull() ?: 1
+
         applicationId = "com.ayoub.baclimits"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = propVersionCode
+        versionName = propVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
