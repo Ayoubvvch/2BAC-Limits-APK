@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2BAC PC — مختبر النهايات التفاعلي | Labo des Limites</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+  <link rel="stylesheet" href="./styles.css?v=3" />
+  <script defer src="./app.js?v=3"></script>
+<!-- AC_SECURITY_START -->
+<link rel="stylesheet" href="/security-shield.css">
+<script src="/security-shield.js" defer></script>
+<!-- AC_SECURITY_END -->
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-badge">2BAC PC</span>
+        <div>
+          <h1 id="app-title">مختبر النهايات اللانهائي</h1>
+          <p id="app-subtitle" class="subtitle">تمارين متجددة بملايير الاحتمالات • تحقق رمزي فوري</p>
+        </div>
+      </div>
+
+      <div class="topbar-actions">
+        <button id="lang-toggle-btn" class="btn btn-outline btn-sm" type="button" title="تبديل اللغة / Changer de langue">
+          Français (BIOF)
+        </button>
+        <div id="user-pill" class="user-pill hidden">
+          <span class="user-dot"></span>
+          <span id="user-display-name"></span>
+          <button id="logout-btn" class="btn-link" type="button"></button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- LOGIN VIEW -->
+    <section id="login-view" class="login-wrapper">
+      <div class="card login-card">
+        <div class="login-hero">
+          <div class="math-hero-pill math-box" id="hero-formula-preview"></div>
+          <h2 id="login-heading">مرحباً بك في فضاء التدريب على النهايات</h2>
+          <p id="login-desc">
+            خوارزمية ذكية تولّد في كل مرة تمريناً جديداً غير مكرر في التعميل، المرافق، الجذور النونية، وتقنية إضافة وطرح الصفر.
+          </p>
+        </div>
+
+        <form id="login-form" class="login-form">
+          <label for="username-input" id="username-label">اسم التلميذ (Username)</label>
+          <div class="input-row">
+            <input
+              id="username-input"
+              type="text"
+              minlength="2"
+              maxlength="32"
+              autocomplete="username"
+              required
+              placeholder="مثال: youssef_pc"
+            />
+            <button id="login-submit-btn" class="btn btn-primary" type="submit">ابدأ التدريب</button>
+          </div>
+          <p id="login-error" class="error-text hidden"></p>
+        </form>
+
+        <div id="recent-users-wrap" class="recent-users hidden">
+          <span id="recent-users-label" class="muted-label">حسابات استُعملت على هذا الجهاز:</span>
+          <div id="recent-users-chips" class="chip-list"></div>
+        </div>
+
+        <div class="feature-grid">
+          <div class="feature-item">
+            <strong id="feat-1-title">ملايير الاحتمالات</strong>
+            <span id="feat-1-desc">تركيب ديناميكي للبسط والمقام والفخاخ الرياضية بدون تكرار.</span>
+          </div>
+          <div class="feature-item">
+            <strong id="feat-2-title">تحقق ذكي بالمعادلات</strong>
+            <span id="feat-2-desc">يقبل 0.5 و 1/2 و √2/2 و 1/√2 كإجابات صحيحة متكافئة.</span>
+          </div>
+          <div class="feature-item">
+            <strong id="feat-3-title">تلميحات وحل مفصل</strong>
+            <span id="feat-3-desc">إرشاد تدريجي ثم تصحيح كامل باللغتين العربية والفرنسية.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WORKSPACE VIEW -->
+    <section id="workspace-view" class="workspace-grid hidden">
+      <!-- LEFT / MAIN COLUMN: Controls + Exercise + Answer + Solution -->
+      <div class="main-col">
+        <!-- Control Bar -->
+        <div class="card controls-card">
+          <div class="controls-row">
+            <div class="control-group">
+              <label for="technique-select" id="tech-label">التقنية</label>
+              <select id="technique-select"></select>
+            </div>
+            <div class="control-group">
+              <label for="difficulty-select" id="diff-label">المستوى</label>
+              <select id="difficulty-select"></select>
+            </div>
+            <div class="control-actions">
+              <button id="new-exercise-btn" class="btn btn-primary" type="button">تمرين جديد</button>
+            </div>
+          </div>
+
+          <div class="seed-loader-row">
+            <input id="seed-input" type="text" placeholder="2BAC-ADD0-L2-..." dir="ltr" />
+            <button id="load-seed-btn" class="btn btn-outline btn-sm" type="button">تحميل كود التمرين</button>
+          </div>
+        </div>
+
+        <!-- Active Exercise Card -->
+        <div class="card exercise-card">
+          <div class="exercise-meta">
+            <div class="meta-badges">
+              <span id="ex-tech-badge" class="badge badge-blue"></span>
+              <span id="ex-diff-badge" class="badge badge-amber"></span>
+              <span id="ex-cas-badge" class="badge badge-green">✓ CAS</span>
+            </div>
+            <button id="copy-seed-btn" class="seed-pill" type="button" dir="ltr" title="Copy Seed">
+              <span id="ex-seed-text"></span>
+              <span class="copy-icon">⧉</span>
+            </button>
+          </div>
+
+          <p id="ex-prompt-text" class="exercise-prompt">احسب النهاية التالية:</p>
+
+          <div class="formula-stage math-box">
+            <div id="ex-formula" class="formula-display"></div>
+            <div id="ex-loading" class="loading-overlay hidden">...</div>
+          </div>
+
+          <!-- Answer Form + Keypad -->
+          <form id="answer-form" class="answer-section">
+            <label for="answer-input" id="answer-label">إجابتك (مثال: 1/2 أو sqrt(3)/2 أو +inf أو -inf)</label>
+            <div class="answer-input-row">
+              <input
+                id="answer-input"
+                type="text"
+                dir="ltr"
+                autocomplete="off"
+                placeholder="1/2, sqrt(2)/2, +inf, -inf..."
+              />
+              <button id="submit-btn" class="btn btn-primary" type="submit">تحقق</button>
+            </div>
+
+            <div class="keypad" aria-label="Math keypad">
+              <button type="button" class="key-btn" data-insert="/" data-cursor-offset="0">a/b</button>
+              <button type="button" class="key-btn" data-insert="sqrt()" data-cursor-offset="-1">√( )</button>
+              <button type="button" class="key-btn" data-insert="root(, 3)" data-cursor-offset="-4">∛( )</button>
+              <button type="button" class="key-btn" data-insert="root(, 4)" data-cursor-offset="-4">⁴√( )</button>
+              <button type="button" class="key-btn" data-insert="^()" data-cursor-offset="-1">xⁿ</button>
+              <button type="button" class="key-btn" data-insert="pi" data-cursor-offset="0">π</button>
+              <button type="button" class="key-btn" data-insert="+inf" data-cursor-offset="0">+∞</button>
+              <button type="button" class="key-btn" data-insert="-inf" data-cursor-offset="0">-∞</button>
+              <button type="button" class="key-btn" data-insert="0" data-cursor-offset="0">0</button>
+              <button type="button" class="key-btn" data-insert="-" data-cursor-offset="0">−</button>
+              <button type="button" id="clear-answer-btn" class="key-btn key-clear">C</button>
+            </div>
+
+            <div id="live-preview-wrap" class="live-preview hidden">
+              <span id="live-preview-label" class="muted-label">معاينة:</span>
+              <span id="live-preview-math" class="math-box"></span>
+            </div>
+          </form>
+
+          <!-- Feedback Banner -->
+          <div id="feedback-box" class="feedback-box hidden"></div>
+
+          <!-- Hint & Solution Controls -->
+          <div class="assist-bar">
+            <button id="hint-btn" class="btn btn-outline" type="button">تلميح</button>
+            <button id="solution-btn" class="btn btn-ghost" type="button">عرض الحل المفصل</button>
+          </div>
+
+          <!-- Hints Container -->
+          <div id="hints-list" class="hints-list hidden"></div>
+
+          <!-- Solution Steps Container -->
+          <div id="solution-box" class="solution-box hidden">
+            <div class="solution-header">
+              <h3 id="solution-title">الحل المفصل خطوة بخطوة</h3>
+              <div class="solution-final-pill">
+                <span id="solution-final-label">النتيجة:</span>
+                <span id="solution-final-math" class="math-box"></span>
+              </div>
+            </div>
+            <div id="solution-steps" class="steps-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT / SIDEBAR COLUMN: Stats + Mastery + History -->
+      <aside class="side-col">
+        <div class="card stats-card">
+          <h3 id="stats-heading">لوحة التقدم</h3>
+          <div class="kpi-grid">
+            <div class="kpi-item">
+              <span class="kpi-val" id="stat-solved">0</span>
+              <span class="kpi-lbl" id="lbl-solved">تمارين محلولة</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-val" id="stat-accuracy">0%</span>
+              <span class="kpi-lbl" id="lbl-accuracy">نسبة الدقة</span>
+            </div>
+            <div class="kpi-item">
+              <span class="kpi-val" id="stat-streak">0</span>
+              <span class="kpi-lbl" id="lbl-streak">السلسلة 🔥</span>
+            </div>
+          </div>
+
+          <h4 id="mastery-heading" class="sub-heading">إتقان التقنيات</h4>
+          <div id="mastery-bars" class="mastery-list"></div>
+        </div>
+
+        <div class="card history-card">
+          <h3 id="history-heading">آخر التمارين</h3>
+          <div id="history-list" class="history-list"></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+</body>
+</html>
