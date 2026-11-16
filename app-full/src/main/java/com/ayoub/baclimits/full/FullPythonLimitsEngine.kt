@@ -32,7 +32,9 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
     private val sympyStrCache = mutableMapOf<String, String>()
 
     init {
-        ensurePythonInitialized()
+        Thread {
+            ensurePythonInitialized()
+        }.start()
     }
 
     private fun ensurePythonInitialized(): Boolean {
@@ -41,12 +43,12 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
             if (isInitialized.get()) return true
             try {
                 if (!Python.isStarted()) {
-                    Python.start(AndroidPlatform(context))
+                    Python.start(AndroidPlatform(context.applicationContext))
                 }
                 isInitialized.set(true)
                 Log.i(TAG, "Chaquopy Python 3.11 engine initialized successfully.")
                 return true
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 initError = e.message
                 Log.e(TAG, "Failed to start Chaquopy Python engine: ${e.message}", e)
                 return false

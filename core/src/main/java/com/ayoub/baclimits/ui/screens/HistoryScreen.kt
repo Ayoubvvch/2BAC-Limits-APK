@@ -45,8 +45,9 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ayoub.baclimits.data.HistoryEntry
-import com.ayoub.baclimits.data.LatexFormatter
+import com.ayoub.baclimits.math.LimitsCasEngine
 import com.ayoub.baclimits.ui.HistoryFilter
+import com.ayoub.baclimits.ui.components.KaTeXFormulaView
 import com.ayoub.baclimits.ui.i18n.AppStrings
 import com.ayoub.baclimits.ui.theme.OledColors
 
@@ -108,11 +109,10 @@ fun HistoryScreen(
                             labelColor = OledColors.TextSecondary
                         ),
                         border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = selected,
-                            borderColor = OledColors.Border,
-                            selectedBorderColor = OledColors.Primary
-                        )
+                            borderColor = if (selected) OledColors.Primary else OledColors.Border,
+                            borderWidth = 1.dp
+                        ),
+                        shape = RoundedCornerShape(99.dp)
                     )
                 }
             }
@@ -122,19 +122,28 @@ fun HistoryScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(32.dp),
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.History,
-                        contentDescription = null,
-                        tint = OledColors.TextMuted,
-                        modifier = Modifier.size(44.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = OledColors.SurfaceElevated,
+                        border = BorderStroke(1.dp, OledColors.Border),
+                        modifier = Modifier.size(54.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Rounded.History,
+                                contentDescription = null,
+                                tint = OledColors.TextMuted,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
                     Text(
                         text = strings.noHistory,
                         style = MaterialTheme.typography.bodyMedium,
@@ -145,15 +154,18 @@ fun HistoryScreen(
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 14.dp, end = 14.dp, bottom = 16.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(filtered, key = { it.seed }) { item ->
+                items(filtered, key = { "${it.seed}_${it.isCorrect}" }) { item ->
                     HistoryItemCard(
                         entry = item,
                         strings = strings,
                         onClick = { onOpenSeed(item.seed) }
                     )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(18.dp))
                 }
             }
         }
@@ -172,8 +184,21 @@ private fun HistoryItemCard(
         null -> Triple(strings.statusPending, OledColors.Amber, OledColors.AmberSoft)
     }
 
-    val readableMath = remember(entry.fullLimitLatex) {
-        LatexFormatter.toReadableUnicode(entry.fullLimitLatex).ifBlank { entry.seed }
+    // Resolve mathematical limit LaTeX: use stored fullLimitLatex or regenerate from seed
+    val effectiveLatex = remember(entry.seed, entry.fullLimitLatex) {
+        if (entry.fullLimitLatex.isNotBlank()) {
+            entry.fullLimitLatex
+        } else {
+            try {
+                LimitsCasEngine.generate(
+                    requestedTechnique = entry.technique,
+                    requestedDifficulty = 1,
+                    explicitSeed = entry.seed
+                ).fullLimitLatex
+            } catch (_: Exception) {
+                ""
+            }
+        }
     }
 
     Surface(
@@ -248,21 +273,33 @@ private fun HistoryItemCard(
                     )
                 }
 
-                // Wrapped mathematical expression in clean Unicode (never overflows horizontally)
-                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                    Surface(
-                        color = OledColors.Background,
-                        shape = RoundedCornerShape(10.dp),
-                        border = BorderStroke(1.dp, OledColors.Border),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = readableMath,
-                            color = OledColors.TextPrimary,
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                // Mathematical limit rendered with KaTeX (No bare math!)
+                Surface(
+                    color = OledColors.Background,
+                    shape = RoundedCornerShape(10.dp),
+                    border = BorderStroke(1.dp, OledColors.Border),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (effectiveLatex.isNotBlank()) {
+                        KaTeXFormulaView(
+                            latex = effectiveLatex,
+                            displayMode = true,
+                            fontPx = 18f,
+                            minScale = 0.72f,
+                            centerWhenFits = false,
+                            minHeightDp = 50,
+                            onTap = onClick
                         )
+                    } else {
+                        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+                            Text(
+                                text = entry.seed,
+                                color = OledColors.TextPrimary,
+                                fontSize = 14.sp,
+                                fontFamily = FontFamily.Monospace,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                 }
 

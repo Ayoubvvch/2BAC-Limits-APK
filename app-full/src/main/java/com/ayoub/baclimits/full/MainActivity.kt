@@ -1,8 +1,8 @@
-package com.ayoub.baclimits
+package com.ayoub.baclimits.full
 
 import android.os.Bundle
+import com.ayoub.baclimits.CoreMainActivity
 import com.ayoub.baclimits.data.OfflineLimitsEngineHolder
-import com.ayoub.baclimits.full.FullPythonLimitsEngine
 
 /**
  * 2BAC Limits — Full Edition Entry Point.
@@ -11,7 +11,7 @@ import com.ayoub.baclimits.full.FullPythonLimitsEngine
 class MainActivity : CoreMainActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        OfflineLimitsEngineHolder.set(FullPythonLimitsEngine(this))
+        OfflineLimitsEngineHolder.set(FullPythonLimitsEngine(applicationContext))
         super.onCreate(savedInstanceState)
     }
 }
