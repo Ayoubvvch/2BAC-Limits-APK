@@ -109,7 +109,10 @@ fun HistoryScreen(
                             labelColor = OledColors.TextSecondary
                         ),
                         border = FilterChipDefaults.filterChipBorder(
-                            borderColor = if (selected) OledColors.Primary else OledColors.Border,
+                            enabled = true,
+                            selected = selected,
+                            borderColor = OledColors.Border,
+                            selectedBorderColor = OledColors.Primary,
                             borderWidth = 1.dp
                         ),
                         shape = RoundedCornerShape(99.dp)
