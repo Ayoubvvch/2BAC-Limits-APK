@@ -9,9 +9,9 @@ android {
 
     defaultConfig {
         val propVersionName = (project.findProperty("versionName") as String?)
-            ?.takeIf { it.isNotBlank() } ?: "1.0.0"
+            ?.takeIf { it.isNotBlank() } ?: "1.1.0"
         val propVersionCode = (project.findProperty("versionCode") as String?)
-            ?.toIntOrNull() ?: 1
+            ?.toIntOrNull() ?: 4
 
         applicationId = "com.ayoub.baclimits"
         minSdk = 24
@@ -20,11 +20,14 @@ android {
         versionName = propVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField("String", "APP_EDITION", "\"lite\"")
+        buildConfigField("String", "APP_EDITION_NAME", "\"Lite\"")
     }
 
     signingConfigs {
         create("release") {
-            storeFile = file("keystore/release.jks")
+            storeFile = rootProject.file("keystore/release.jks")
             storePassword = "baclimits_release_key_2026"
             keyAlias = "baclimits"
             keyPassword = "baclimits_release_key_2026"
@@ -61,16 +64,11 @@ android {
 
     buildFeatures {
         buildConfig = true
-        viewBinding = false
         compose = true
     }
 
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.10"
-    }
-
-    testOptions {
-        unitTests.isReturnDefaultValues = true
     }
 
     packaging {
@@ -81,22 +79,5 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.02.02")
-    implementation(composeBom)
-
-    implementation("androidx.core:core-ktx:1.12.0")
-    implementation("androidx.appcompat:appcompat:1.6.1")
-    implementation("androidx.activity:activity-ktx:1.8.2")
-    implementation("androidx.activity:activity-compose:1.8.2")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
-    implementation("androidx.webkit:webkit:1.10.0")
-
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.foundation:foundation")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
-
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20231013")
+    implementation(project(":core"))
 }

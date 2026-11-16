@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Pure OLED accent ring -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#3B82F6"
+        android:strokeWidth="2.5"
+        android:pathData="M54,18 A36,36 0 1,1 53.99,18 Z" />
+    <!-- Infinity / limit curve glyph -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#F8FAFC"
+        android:strokeWidth="4.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M34,54 C34,44 46,44 54,54 C62,64 74,64 74,54 C74,44 62,44 54,54 C46,64 34,64 34,54 Z" />
+    <!-- Arrow x -> infinity accent -->
+    <path
+        android:fillColor="#2DD4BF"
+        android:pathData="M48,72 L60,72 L57,69 L63,73 L57,77 L60,74 L48,74 Z" />
+</vector>

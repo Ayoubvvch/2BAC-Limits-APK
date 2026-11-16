@@ -1,4 +1,4 @@
-name: Build & Release Signed APK
+name: Build & Release Dual Signed APKs (Lite & Full)
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g. 1.0.0)'
+        description: 'Release version tag (e.g. 1.1.0)'
         required: false
         default: ''
 
@@ -25,8 +25,8 @@ jobs:
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+            distribution: 'temurin'
+            java-version: '17'
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
@@ -42,58 +42,99 @@ jobs:
             if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
               VERSION="${GITHUB_REF_NAME#v}"
             else
-              VERSION="1.0.${{ github.run_number }}"
+              VERSION="1.1.${{ github.run_number }}"
             fi
           fi
-          VERSION_CODE=$(( ${{ github.run_number }} + 1 ))
+          VERSION_CODE=$(( ${{ github.run_number }} + 4 ))
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "tag_name=v${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Run Unit Tests
-        run: ./gradlew testReleaseUnitTest --no-daemon --stacktrace
+      - name: Run Core Unit Tests
+        run: ./gradlew :core:testReleaseUnitTest --no-daemon --stacktrace
 
-      - name: Build Signed Release APK
-        run: ./gradlew assembleRelease -PversionName="${{ steps.version.outputs.version }}" -PversionCode="${{ steps.version.outputs.version_code }}" --no-daemon --stacktrace
+      - name: Build Dual Signed Release APKs (Lite & Full)
+        run: ./gradlew :app:assembleRelease :app-full:assembleRelease -PversionName="${{ steps.version.outputs.version }}" -PversionCode="${{ steps.version.outputs.version_code }}" --no-daemon --stacktrace
 
-      - name: Verify APK V1+V2+V3+V4 Signature
+      - name: Verify Both APK Signatures (V1+V2+V3+V4)
         run: |
-          OUTPUT_DIR="app/build/outputs/apk/release"
-          APK_FILE=$(find "$OUTPUT_DIR" -type f -name "*.apk" | head -n 1)
-          if [ -z "$APK_FILE" ]; then
-            echo "Error: Release APK not found!"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
+
+          LITE_APK=$(find "app/build/outputs/apk/release" -type f -name "*.apk" | head -n 1)
+          if [ -z "$LITE_APK" ]; then
+            echo "Error: Lite Release APK not found!"
             exit 1
           fi
-          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner | sort -V | tail -n 1)
-          "$APKSIGNER" verify --verbose --print-certs "$APK_FILE"
+          echo "=== Verifying Lite APK ($LITE_APK) ==="
+          "$APKSIGNER" verify --verbose --print-certs "$LITE_APK"
 
-      - name: Prepare APK Asset
+          FULL_APK=$(find "app-full/build/outputs/apk/release" -type f -name "*.apk" | head -n 1)
+          if [ -z "$FULL_APK" ]; then
+            echo "Error: Full Release APK not found!"
+            exit 1
+          fi
+          echo "=== Verifying Full APK ($FULL_APK) ==="
+          "$APKSIGNER" verify --verbose --print-certs "$FULL_APK"
+
+      - name: Prepare APK Assets
         id: prepare_apk
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          OUTPUT_DIR="app/build/outputs/apk/release"
-          APK_FILE=$(find "$OUTPUT_DIR" -type f -name "*.apk" | head -n 1)
-          TARGET_NAME="2BAC-Limits-v${VERSION}.apk"
-          cp "$APK_FILE" "$TARGET_NAME"
 
-          echo "apk_path=$TARGET_NAME" >> "$GITHUB_OUTPUT"
+          LITE_APK=$(find "app/build/outputs/apk/release" -type f -name "*.apk" | head -n 1)
+          FULL_APK=$(find "app-full/build/outputs/apk/release" -type f -name "*.apk" | head -n 1)
+
+          LITE_TARGET="2BAC-Limits-Lite-v${VERSION}.apk"
+          FULL_TARGET="2BAC-Limits-Full-v${VERSION}.apk"
+
+          cp "$LITE_APK" "$LITE_TARGET"
+          cp "$FULL_APK" "$FULL_TARGET"
+
+          ls -lh "$LITE_TARGET" "$FULL_TARGET"
+
+          echo "lite_path=$LITE_TARGET" >> "$GITHUB_OUTPUT"
+          echo "full_path=$FULL_TARGET" >> "$GITHUB_OUTPUT"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag_name=${{ steps.version.outputs.tag_name }}" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release and Upload Signed APK
+      - name: Create GitHub Release and Upload Dual Signed APKs
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.prepare_apk.outputs.tag_name }}
-          name: "2BAC Limits v${{ steps.prepare_apk.outputs.version }}"
+          name: "2BAC Limits v${{ steps.prepare_apk.outputs.version }} (Lite & Full Dual Release)"
           body: |
-            ### 2BAC Limits — 100% Native Android Release (v${{ steps.prepare_apk.outputs.version }})
+            ### 2BAC Limits — Release v${{ steps.prepare_apk.outputs.version }}
 
-            - **100% Native Jetpack Compose + Material 3 Mobile UI (OLED Black `#000000`)**: Built natively for Android phones & landscape screens with 4 Bottom Navigation tabs (**Practice / التمرين**, **Progress / التقدم**, **History / السجل**, **Settings / الإعدادات**), bilingual Arabic (RTL) / French BIOF (LTR) switching, tactile custom Math Keypad with live KaTeX preview, and native BottomSheets/Dialogs.
-            - **Zero-Clip Adaptive KaTeX 0.16.11 Math Stage**: Automatically scales long limits proportionally down to legible sizes, anchors horizontal panning cleanly from the left edge, and provides a one-tap **Fullscreen Zoom Dialog (0.75×–2.20×)** so long limits never get clipped on narrow phone screens.
-            - **Online-First Backend Sync + Offline CAS Engine**: Connects to the live FastAPI + SymPy backend (`http://51.170.138.59`) when online so accounts restore stats, mastery, history, and active exercises immediately, with seamless offline fallback to the deterministic Kotlin CAS engine across all 6 techniques (`poly_factor`, `sqrt_conjugate`, `nth_root`, `add_sub_zero`, `trig`, `hybrid`).
-            - **Persistent V1+V2+V3+V4 Signing**: Signed with `app/keystore/release.jks` (`bac_limits_v1.db` + native session migration) for seamless in-place upgrades without data loss.
-            - **Integrated In-App Updater (OTA)**: Live download progress with `FileProvider` package installation and optional private-repo token support.
-          files: ${{ steps.prepare_apk.outputs.apk_path }}
+            نقدم لكم الإصدار الثنائي الجديد لتطبيق **2BAC Limits** (مختبر النهايات اللانهائي) لطلاب السنة الثانية بكالوريا علوم تجريبية ورياضية بالمغرب، بنسختين رسميتين تلبيان كافة الاحتياجات:
+
+            ---
+
+            ### 🚀 1. النسخة الخفيفة — Lite Edition (`2BAC-Limits-Lite-v${{ steps.prepare_apk.outputs.version }}.apk`)
+            * **الحجم**: خفيف جداً (~2.4 MB فقط).
+            * **الإقلاع**: فوري ولحظي بدون أي تأخير عند التشغيل.
+            * **المحرك أوفلاين**: محرك Kotlin CAS الداخلي المستقل للتوليد والتصحيح.
+            * **المزامنة السحابية**: مزامنة كاملة وتلقائية مع سيرفر المنصة (`51.170.138.59`).
+            * **الاستخدام المثالي**: الأجهزة ذات السعة التخزينية المحدودة، أو المراجعة السريعة أثناء الاتصال بالإنترنت.
+
+            ---
+
+            ### ⚡ 2. النسخة الكاملة — Full Edition (`2BAC-Limits-Full-v${{ steps.prepare_apk.outputs.version }}.apk`)
+            * **الترسانة الكاملة**: محرك Python 3.11 مدمج أصلياً (عبر Chaquopy) مع مكتبة **SymPy 1.13+** ومكتبة **mpmath**.
+            * **دقة رياضية 100% أوفلاين**: يحمل نفس كود محرك السيرفر بالكامل (4,619 سطراً برمجياً عبر التقنيات الست: `poly_factor`, `sqrt_conjugate`, `nth_root`, `add_sub_zero`, `trig`, `hybrid`).
+            * **تصحيح رمزي مكافئ 100%**: يفهم جميع أشكال الإجابات الرياضية المكافئة ويفحصها بالبرهان الجبري الصارم.
+            * **التشغيل الأول**: يستغرق بضع ثوانٍ إضافية عند أول تشغيل فقط لفك حزم بايثون، ثم يعمل بسلاسة وسرعة فائقة.
+
+            ---
+
+            ### ✨ المميزات المشتركة في كلا النسختين:
+            * **واجهة Jetpack Compose Material 3** بأسلوب OLED Black النقي (`#000000`).
+            * **مرحلة KaTeX 0.16.11 التكيفية مع نافذة تكبير ملء الشاشة (0.75×–2.20×)** لمنع قص التعبيرات الرياضية الطويلة.
+            * **لوحة مفاتيح رياضية تفاعلية (Math Keypad)** مزودة بجذور نونية، دوال مثلثية، وما لا نهاية.
+            * **توقيع دائم موحد V1+V2+V3+V4**: ترقية مباشرة وسلسة بدون فقدان البيانات أو السجل المحلي في SQLite.
+            * **محدث تلقائي داخل التطبيق (OTA Updater)** مع دعم كشف النسخة وتحميل النسخة المقابلة بنقرة واحدة من الإعدادات.
+          files: |
+            ${{ steps.prepare_apk.outputs.lite_path }}
+            ${{ steps.prepare_apk.outputs.full_path }}
           draft: false
           prerelease: false
         env:

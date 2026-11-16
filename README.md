@@ -1,74 +1,105 @@
-# 2BAC Limits — Native Android APK
+# 2BAC Limits — Native Android APK (Dual Editions: Lite & Full)
 
 100% native Jetpack Compose & Material 3 Android application for **2BAC PC — Labo des Limites** (`مختبر النهايات اللانهائي`), designed from the ground up for mobile portrait & landscape usage in pure OLED Black Mode (`#000000`).
 
-## Architecture & Highlights
+---
 
-- **100% Native Jetpack Compose Material 3 UI (`MainActivity` + `BacLimitsViewModel`)**:
-  - **OLED Black Theme (`OledColors`)** with edge-to-edge black system bars and seamless bilingual **Arabic (RTL) / French BIOF (LTR)** layout switching (`AppStrings`).
-  - **4-Tab Bottom Navigation**: `Practice` (adaptive problem workspace), `Progress` (animated accuracy arc & per-technique mastery), `History` (filterable exercise cards with wrapped readable Unicode math via `LatexFormatter`), and `Settings` (account switcher, language, server diagnostics, OTA updater).
-  - **Tactile Math Keypad (`MathKeypad`)**: Haptic key grid for roots (`√`, `∛`, `⁴√`), infinities (`+∞`, `-∞`), `π`, trig (`sin`, `cos`, `tan`), fractions, exponents, and cursor-aware editing with live KaTeX preview and optional system keyboard toggle.
-- **Zero-Clip Adaptive Math Stage (`KaTeXFormulaView` + `KaTeXStepsView` + `katex_stage.html`)**:
-  - Offline bundled **KaTeX 0.16.11** canvas with proportional auto-scaling (`1.0x → 0.72x`), left-anchored horizontal panning for extra-long limits, and a one-tap **Fullscreen Zoom Dialog** (`0.75×` to `2.20×` vector magnification).
-  - Step-by-step bilingual hints & solutions render mixed prose + inline `$...$` equations crisply via KaTeX `auto-render`.
-- **Online-First Sync + Offline CAS Engine (`LimitsRepository` + `LocalLimitsApi` + `ProgressSyncManager`)**:
-  - Syncs directly with the FastAPI + SymPy backend (`http://51.170.138.59`) when online, restoring student progress, history, mastery, and active exercises across devices.
-  - Falls back transparently offline using deterministic parametric generation (**`LimitsCasEngine`** across `poly_factor`, `sqrt_conjugate`, `nth_root`, `add_sub_zero`, `trig`, `hybrid`), symbolic equivalence checking (**`MathExprEvaluator`**), SQLite v2 server cache (**`StudentDatabase`**), and replay sync queue.
-- **Persistent V1 + V2 + V3 + V4 Signing & In-App OTA Updater (`AppUpdaterManager`)**:
-  - Uses `app/keystore/release.jks` (`enableV1Signing` through `enableV4Signing`) for seamless upgrades over prior versions without data loss.
-  - Checks GitHub Releases (`Ayoubvvch/2BAC-Limits-APK`), downloads with live progress bar, and installs via `FileProvider`.
+## 🎯 Dual Edition Architecture (النسختان الرسميتان)
 
-## Project Structure
+| الميزة / Feature | النسخة الخفيفة (Lite Edition) | النسخة الكاملة (Full Edition) |
+|---|---|---|
+| **حجم التطبيق (APK Size)** | **~2.4 MB** (خفيف جداً) | **~25–30 MB** (شامل مكتبات بايثون) |
+| **المحرك أوفلاين (Offline Engine)** | محرك Kotlin CAS الداخلي | **Python 3.11 + SymPy 1.13+ CAS** |
+| **دقة التوليد أوفلاين** | بارامترية سريعة ودقيقة | **100% مطابقة تامة لخوارزميات السيرفر** |
+| **التصحيح الرمزي (Grading)** | فحص رمزي محلي مدمج | **SymPy CAS Symbolic Proof & Equivalence** |
+| **سرعة الإقلاع الأول** | فوري ولحظي | ثوانٍ إضافية في أول تشغيل لفك الحزم ثم سريع |
+| **المزامنة السحابية (Cloud Sync)** | متزامنة مع خادمنا (`51.170.138.59`) | متزامنة مع خادمنا (`51.170.138.59`) |
+| **اسم الحزمة (Application ID)** | `com.ayoub.baclimits` | `com.ayoub.baclimits.full` |
+| **اسم ملف الـ APK** | `2BAC-Limits-Lite-v{VER}.apk` | `2BAC-Limits-Full-v{VER}.apk` |
+
+---
+
+## 🏗️ Project Structure
 
 ```text
-app/
-├── keystore/release.jks
-├── build.gradle.kts
-└── src/
-    ├── main/
-    │   ├── assets/
-    │   │   ├── katex_stage.html        # Offline math canvas & step renderer
-    │   │   └── vendor/katex/           # Offline KaTeX 0.16.11 bundle
-    │   └── java/com/ayoub/baclimits/
-    │       ├── MainActivity.kt
-    │       ├── math/
-    │       │   ├── MathExprEvaluator.kt
-    │       │   └── LimitsCasEngine.kt
-    │       ├── data/
-    │       │   ├── LimitsModels.kt
-    │       │   ├── LatexFormatter.kt
-    │       │   ├── StudentDatabase.kt
-    │       │   ├── RemoteSyncProtocol.kt
-    │       │   ├── LocalLimitsApi.kt
-    │       │   ├── ProgressSyncManager.kt
-    │       │   ├── LimitsRepository.kt
-    │       │   └── AppUpdaterManager.kt
-    │       └── ui/
-    │           ├── BacLimitsViewModel.kt
-    │           ├── i18n/AppStrings.kt
-    │           ├── theme/BacLimitsTheme.kt
-    │           ├── components/
-    │           │   ├── KaTeXMathView.kt
-    │           │   ├── MathKeypad.kt
-    │           │   └── AppSheets.kt
-    │           └── screens/
-    │               ├── LoginScreen.kt
-    │               ├── PracticeScreen.kt
-    │               ├── ProgressScreen.kt
-    │               ├── HistoryScreen.kt
-    │               └── SettingsScreen.kt
-    └── test/java/com/ayoub/baclimits/
-        ├── LimitsCasEngineTest.kt
-        ├── RemoteSyncProtocolTest.kt
-        ├── LatexFormatterTest.kt
-        └── LimitsModelsTest.kt
+├── keystore/release.jks                # Persistent V1+V2+V3+V4 signing keystore
+├── core/                               # Shared Android Library Module
+│   ├── build.gradle.kts
+│   └── src/main/
+│       ├── assets/
+│       │   ├── katex_stage.html        # Offline math canvas & step renderer
+│       │   └── vendor/katex/           # Offline KaTeX 0.16.11 bundle
+│       └── java/com/ayoub/baclimits/
+│           ├── CoreMainActivity.kt
+│           ├── data/
+│           │   ├── OfflineLimitsEngine.kt   # Engine abstraction & holder
+│           │   ├── LimitsModels.kt
+│           │   ├── LatexFormatter.kt
+│           │   ├── StudentDatabase.kt
+│           │   ├── RemoteSyncProtocol.kt
+│           │   ├── LocalLimitsApi.kt
+│           │   ├── ProgressSyncManager.kt
+│           │   ├── LimitsRepository.kt
+│           │   └── AppUpdaterManager.kt
+│           ├── math/
+│           │   ├── MathExprEvaluator.kt
+│           │   └── LimitsCasEngine.kt       # Pure Kotlin CAS engine
+│           └── ui/
+│               ├── BacLimitsViewModel.kt
+│               ├── i18n/AppStrings.kt
+│               ├── theme/BacLimitsTheme.kt
+│               ├── components/
+│               │   ├── KaTeXMathView.kt
+│               │   ├── MathKeypad.kt
+│               │   └── AppSheets.kt
+│               └── screens/
+│                   ├── LoginScreen.kt
+│                   ├── PracticeScreen.kt
+│                   ├── ProgressScreen.kt
+│                   ├── HistoryScreen.kt
+│                   └── SettingsScreen.kt
+├── app/                                # Lite Application Module (~2.4 MB)
+│   ├── build.gradle.kts
+│   └── src/main/
+│       ├── AndroidManifest.xml
+│       └── java/com/ayoub/baclimits/
+│           └── MainActivity.kt         # Injects LiteKotlinLimitsEngine
+└── app-full/                           # Full Application Module (Python + SymPy)
+    ├── build.gradle.kts                # Applies Chaquopy plugin with pip sympy>=1.13
+    └── src/main/
+        ├── AndroidManifest.xml
+        ├── python/
+        │   ├── engine/                 # 4,619 lines of Moroccan limits procedural code
+        │   │   ├── models.py
+        │   │   ├── bricks.py
+        │   │   ├── selector.py
+        │   │   ├── verifier.py
+        │   │   └── generators/
+        │   └── engine_bridge.py        # Python bridge for generation & grading
+        └── java/com/ayoub/baclimits/
+            ├── MainActivity.kt         # Injects FullPythonLimitsEngine
+            └── full/
+                └── FullPythonLimitsEngine.kt
 ```
 
-## Build & Test Locally
+---
+
+## 🚀 Build & Test Commands
 
 ```bash
-./gradlew testReleaseUnitTest
+# Run unit tests on host JVM
+./gradlew :core:testReleaseUnitTest
+
+# Build Lite Release APK (~2.4 MB)
+./gradlew :app:assembleRelease
+
+# Build Full Release APK (with Python + SymPy)
+./gradlew :app-full:assembleRelease
+
+# Build Both Dual Signed APKs
 ./gradlew assembleRelease
 ```
 
-The signed APK is output to `app/build/outputs/apk/release/app-release.apk`.
+Signed APK outputs:
+- **Lite**: `app/build/outputs/apk/release/app-release.apk`
+- **Full**: `app-full/build/outputs/apk/release/app-full-release.apk`

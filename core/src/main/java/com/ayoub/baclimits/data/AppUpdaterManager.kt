@@ -29,6 +29,9 @@ data class UpdateCheckState(
     val releaseNotes: String = "",
     val browserUrl: String? = null,
     val apiAssetUrl: String? = null,
+    val otherEditionBrowserUrl: String? = null,
+    val currentEdition: String = "lite",
+    val engineLabel: String = "",
     val error: String? = null,
     val lastCheckedAt: Long = 0L
 )
@@ -119,16 +122,38 @@ class AppUpdaterManager(
                 val json = JSONObject(body)
                 val tag = json.optString("tag_name", "").removePrefix("v").trim()
                 val notes = json.optString("body", "").take(320)
+                val currentEdition = OfflineLimitsEngineHolder.get().edition.lowercase()
+                val currentEngineName = OfflineLimitsEngineHolder.get().engineName
+                val otherEdition = if (currentEdition == "full") "lite" else "full"
+
                 val assets = json.optJSONArray("assets")
                 var browserUrl: String? = null
                 var apiAssetUrl: String? = null
+                var otherEditionBrowserUrl: String? = null
+
                 if (assets != null) {
                     for (i in 0 until assets.length()) {
                         val a = assets.getJSONObject(i)
-                        if (a.optString("name", "").endsWith(".apk", ignoreCase = true)) {
-                            browserUrl = a.optString("browser_download_url", "").takeIf { it.isNotBlank() }
-                            apiAssetUrl = a.optString("url", "").takeIf { it.isNotBlank() }
-                            break
+                        val name = a.optString("name", "").lowercase()
+                        if (name.endsWith(".apk")) {
+                            if (name.contains(currentEdition)) {
+                                browserUrl = a.optString("browser_download_url", "").takeIf { it.isNotBlank() }
+                                apiAssetUrl = a.optString("url", "").takeIf { it.isNotBlank() }
+                            } else if (name.contains(otherEdition)) {
+                                otherEditionBrowserUrl = a.optString("browser_download_url", "").takeIf { it.isNotBlank() }
+                            }
+                        }
+                    }
+
+                    // Fallback to any apk if exact edition match was not found
+                    if (browserUrl == null && apiAssetUrl == null) {
+                        for (i in 0 until assets.length()) {
+                            val a = assets.getJSONObject(i)
+                            if (a.optString("name", "").endsWith(".apk", ignoreCase = true)) {
+                                browserUrl = a.optString("browser_download_url", "").takeIf { it.isNotBlank() }
+                                apiAssetUrl = a.optString("url", "").takeIf { it.isNotBlank() }
+                                break
+                            }
                         }
                     }
                 }
@@ -143,6 +168,9 @@ class AppUpdaterManager(
                         releaseNotes = notes,
                         browserUrl = browserUrl,
                         apiAssetUrl = apiAssetUrl,
+                        otherEditionBrowserUrl = otherEditionBrowserUrl,
+                        currentEdition = currentEdition,
+                        engineLabel = currentEngineName,
                         error = null,
                         lastCheckedAt = System.currentTimeMillis()
                     )

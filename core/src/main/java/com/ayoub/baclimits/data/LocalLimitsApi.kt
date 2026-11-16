@@ -158,13 +158,15 @@ class LocalLimitsApi(
 
             if (user.isNotBlank()) db.ensureStudentRow(user)
 
+            val engine = OfflineLimitsEngineHolder.get()
+
             if (explicitSeed != null) {
                 val cached = db.getCachedServerExercise(explicitSeed)
                 if (cached != null) {
                     if (user.isNotBlank()) db.activateCachedServerExercise(user, cached)
                     return ok(cached)
                 }
-                if (!LimitsCasEngine.isValidSeed(explicitSeed)) {
+                if (!engine.isValidSeed(explicitSeed)) {
                     return err(
                         503,
                         "هذا التمرين غير محفوظ محلياً. اتصل بالإنترنت لتحميله من السيرفر. / Exercice non disponible hors-ligne."
@@ -173,7 +175,7 @@ class LocalLimitsApi(
             }
 
             val (weakest, suggestedDiff) = db.getWeakestTechniqueAndDifficulty(user)
-            val ex = LimitsCasEngine.generate(
+            val ex = engine.generate(
                 requestedTechnique = tech,
                 requestedDifficulty = diff,
                 explicitSeed = explicitSeed,
@@ -207,8 +209,10 @@ class LocalLimitsApi(
                 return remote
             }
 
-            if (LimitsCasEngine.isValidSeed(seed)) {
-                val ex = LimitsCasEngine.generate("adaptive", 0, explicitSeed = seed)
+            val engine = OfflineLimitsEngineHolder.get()
+
+            if (engine.isValidSeed(seed)) {
+                val ex = engine.generate("adaptive", 0, explicitSeed = seed)
                 if (hintIndex !in ex.hints.indices) {
                     return err(400, "No more hints available")
                 }
@@ -250,8 +254,10 @@ class LocalLimitsApi(
                 return remote
             }
 
-            if (LimitsCasEngine.isValidSeed(seed)) {
-                val ex = LimitsCasEngine.generate("adaptive", 0, explicitSeed = seed)
+            val engine = OfflineLimitsEngineHolder.get()
+
+            if (engine.isValidSeed(seed)) {
+                val ex = engine.generate("adaptive", 0, explicitSeed = seed)
                 if (user.isNotBlank()) db.recordSolutionRevealed(user, ex.seed)
                 return ok(db.solutionToJson(ex))
             }
@@ -293,44 +299,32 @@ class LocalLimitsApi(
                 return remote
             }
 
-            if (!LimitsCasEngine.isValidSeed(seed)) {
+            val engine = OfflineLimitsEngineHolder.get()
+
+            if (!engine.isValidSeed(seed)) {
                 return err(
                     503,
                     "السيرفر غير متصل حالياً لتصحيح هذا التمرين السحابي. اضغط «تمرين جديد» للتدريب أوفلاين، أو أعد التحقق عند عودة الاتصال."
                 )
             }
 
-            val ex = LimitsCasEngine.generate("adaptive", 0, explicitSeed = seed)
-            val eval = MathExprEvaluator.evaluate(rawAnswer)
-            val isCorrect = MathExprEvaluator.isEquivalent(ex.expectedAnswer, rawAnswer)
-
-            val msgAr: String
-            val msgFr: String
-            when {
-                isCorrect -> {
-                    msgAr = "أحسنت! إجابة صحيحة ومتطابقة رمزياً."
-                    msgFr = "Bravo ! Réponse exacte et symboliquement équivalente."
-                }
-                eval is com.ayoub.baclimits.math.EvalResult.Invalid -> {
-                    msgAr = "تعذر فهم الصيغة الرياضية (${eval.reason}). جرب مثالاً مثل: 1/2 أو sqrt(2)/2 أو +inf"
-                    msgFr = "Expression invalide (${eval.reason}). Ex : 1/2, sqrt(2)/2 ou +inf"
-                }
-                else -> {
-                    msgAr = "إجابة غير صحيحة. استعمل زر التلميح أو راجع الإشارة والمعاملات ثم أعد المحاولة!"
-                    msgFr = "Réponse incorrecte. Utilise un indice ou vérifie le signe et les coefficients !"
-                }
-            }
+            val ex = engine.generate("adaptive", 0, explicitSeed = seed)
+            val evalResult = engine.evaluateAnswer(
+                expectedAnswer = ex.expectedAnswer,
+                studentAnswer = rawAnswer,
+                expectedLatex = ex.answerLatex
+            )
 
             val gradeObj = JSONObject()
-                .put("is_correct", isCorrect)
-                .put("message", JSONObject().put("ar", msgAr).put("fr", msgFr))
+                .put("is_correct", evalResult.isCorrect)
+                .put("message", JSONObject().put("ar", evalResult.messageAr).put("fr", evalResult.messageFr))
 
-            val updatedStats = db.recordSubmission(user, ex, rawAnswer, isCorrect, gradeObj)
+            val updatedStats = db.recordSubmission(user, ex, rawAnswer, evalResult.isCorrect, gradeObj)
 
             val resp = JSONObject().apply {
                 put("grade", gradeObj)
                 put("stats", updatedStats)
-                if (isCorrect) {
+                if (evalResult.isCorrect) {
                     put("solution", db.solutionToJson(ex))
                 }
             }

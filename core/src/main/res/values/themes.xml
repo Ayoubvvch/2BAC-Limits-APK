@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.BacLimits" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/oled_black</item>
+        <item name="android:colorBackground">@color/oled_black</item>
+        <item name="android:statusBarColor">@color/oled_black</item>
+        <item name="android:navigationBarColor">@color/oled_black</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="colorPrimary">@color/primary_blue</item>
+        <item name="colorPrimaryDark">@color/oled_black</item>
+        <item name="colorAccent">@color/primary_blue</item>
+    </style>
+</resources>

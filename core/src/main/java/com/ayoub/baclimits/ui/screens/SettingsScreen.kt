@@ -225,6 +225,93 @@ fun SettingsScreen(
             }
         }
 
+        // App Edition & Engine Section
+        val currentEdition = remember {
+            com.ayoub.baclimits.data.OfflineLimitsEngineHolder.get().edition
+        }
+        val isFull = currentEdition == "full"
+
+        SettingsSectionCard(
+            title = if (lang == "fr") "Édition de l'application & Moteur" else "نسخة التطبيق ومحرك التوليد",
+            icon = Icons.Rounded.CloudSync,
+            accent = if (isFull) OledColors.Teal else OledColors.Primary
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (lang == "fr") "Édition installée" else "النسخة المثبتة",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OledColors.TextSecondary
+                )
+                Surface(
+                    color = if (isFull) OledColors.TealSoft else OledColors.PrimarySoft,
+                    shape = RoundedCornerShape(99.dp),
+                    border = BorderStroke(1.dp, if (isFull) OledColors.Teal else OledColors.Primary)
+                ) {
+                    Text(
+                        text = if (isFull) "Full (Python + SymPy)" else "Lite (Kotlin CAS)",
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isFull) OledColors.Teal else Color(0xFF93C5FD)
+                    )
+                }
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(OledColors.SurfaceElevated, RoundedCornerShape(10.dp))
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = if (isFull) {
+                        if (lang == "fr")
+                            "Édition Full complète : embarque l'arsenal procédural Python 3.11 + SymPy CAS. Génération et vérification symbolique 100% identiques au serveur en mode hors-ligne."
+                        else
+                            "النسخة الكاملة: مدمج معها محرك بايثون 3.11 ومكتبة SymPy CAS. توليد وتصحيح رمزي مطابق 100% لخوارزميات السيرفر حتى بدون إنترنت."
+                    } else {
+                        if (lang == "fr")
+                            "Édition Lite ultra-légère (~2.4 Mo) : démarrage instantané avec moteur CAS Kotlin autonome. Synchronisation automatique avec le serveur en ligne."
+                        else
+                            "النسخة الخفيفة والسريعة (~2.4 MB): إقلاع فوري مع محرك CAS بلغة Kotlin أوفلاين، ومزامنة تلقائية مع السيرفر عند توفر الاتصال."
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = OledColors.TextSecondary
+                )
+            }
+
+            val otherEditionUrl = updateState.otherEditionBrowserUrl
+            if (!otherEditionUrl.isNullOrBlank()) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                OutlinedButton(
+                    onClick = {
+                        try {
+                            val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(otherEditionUrl))
+                            context.startActivity(intent)
+                        } catch (_: Exception) {}
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, if (isFull) OledColors.Primary else OledColors.Teal)
+                ) {
+                    Text(
+                        text = if (isFull) {
+                            if (lang == "fr") "Télécharger l'édition Lite (~2.4 Mo)" else "تحميل النسخة الخفيفة Lite (~2.4 MB)"
+                        } else {
+                            if (lang == "fr") "Télécharger l'édition Full (Python + SymPy)" else "تحميل النسخة الكاملة Full (مع بايثون)"
+                        },
+                        fontWeight = FontWeight.Bold,
+                        color = if (isFull) OledColors.Primary else OledColors.Teal
+                    )
+                }
+            }
+        }
+
         // OTA Updater Section
         SettingsSectionCard(
             title = strings.updaterSection,

@@ -5,10 +5,16 @@
 .DS_Store
 /build
 /app/build
+/app-full/build
+/core/build
 /captures
 .externalNativeBuild
 .cxx
 *.apk
 *.ap_
 *.aab
+__pycache__/
+*.py[cod]
+*$py.class
+!keystore/release.jks
 !app/keystore/release.jks

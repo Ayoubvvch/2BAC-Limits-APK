@@ -9,6 +9,7 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        maven("https://chaquo.com/maven")
     }
 }
 dependencyResolutionManagement {
@@ -16,8 +17,11 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        maven("https://chaquo.com/maven")
     }
 }
 
-rootProject.name = "2BAC-Limits-APK"
+rootProject.name = "2BAC-Limits"
+include(":core")
 include(":app")
+include(":app-full")
