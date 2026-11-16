@@ -44,7 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.ayoub.baclimits.BuildConfig
+import com.ayoub.baclimits.core.BuildConfig
 import com.ayoub.baclimits.data.SyncStatusSnapshot
 import com.ayoub.baclimits.data.UpdateCheckState
 import com.ayoub.baclimits.ui.components.SyncDiagnosticsCard

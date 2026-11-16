@@ -56,7 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.ayoub.baclimits.BuildConfig
+import com.ayoub.baclimits.core.BuildConfig
 import com.ayoub.baclimits.data.SyncStatusSnapshot
 import com.ayoub.baclimits.ui.components.KaTeXFormulaView
 import com.ayoub.baclimits.ui.i18n.AppStrings

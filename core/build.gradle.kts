@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.ayoub.baclimits"
+    namespace = "com.ayoub.baclimits.core"
     compileSdk = 34
 
     defaultConfig {

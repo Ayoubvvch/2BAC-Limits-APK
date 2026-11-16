@@ -9,7 +9,7 @@ import android.os.Handler
 import android.os.Looper
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.ayoub.baclimits.BuildConfig
+import com.ayoub.baclimits.core.BuildConfig
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File

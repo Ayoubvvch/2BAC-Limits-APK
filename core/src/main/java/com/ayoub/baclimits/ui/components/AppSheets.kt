@@ -56,7 +56,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import com.ayoub.baclimits.BuildConfig
+import com.ayoub.baclimits.core.BuildConfig
 import com.ayoub.baclimits.data.LocalizedMessage
 import com.ayoub.baclimits.data.SolutionData
 import com.ayoub.baclimits.data.SyncStatusSnapshot
