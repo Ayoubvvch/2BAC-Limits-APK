@@ -9,6 +9,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.text.TextUtils
 import android.util.Base64
 import android.view.Gravity
 import android.view.View
@@ -33,6 +34,7 @@ import androidx.webkit.WebViewFeature
 import com.ayoub.baclimits.data.LocalLimitsApi
 import com.ayoub.baclimits.data.ProgressSyncManager
 import com.ayoub.baclimits.data.StudentDatabase
+import com.ayoub.baclimits.data.SyncStatusSnapshot
 import com.ayoub.baclimits.updater.InAppUpdaterDialog
 import java.io.ByteArrayInputStream
 import java.io.File
@@ -47,7 +49,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var syncManager: ProgressSyncManager
     private lateinit var updaterDialog: InAppUpdaterDialog
 
-    private val apiExecutor = Executors.newFixedThreadPool(2)
+    private val apiExecutor = Executors.newFixedThreadPool(4)
     private var pendingApkFile: File? = null
 
     private val installPermissionLauncher = registerForActivityResult(
@@ -69,16 +71,12 @@ class MainActivity : AppCompatActivity() {
         setupOledWindow()
 
         db = StudentDatabase(this)
-        syncManager = ProgressSyncManager(this, db) { statusText, _, _ ->
+        syncManager = ProgressSyncManager(this, db) { snapshot ->
             runOnUiThread {
-                if (::syncBadgeText.isInitialized) {
-                    syncBadgeText.text = statusText
-                }
+                applySyncSnapshot(snapshot)
             }
         }
-        localApi = LocalLimitsApi(db) {
-            syncManager.triggerSyncNow()
-        }
+        localApi = LocalLimitsApi(db, syncManager)
         updaterDialog = InAppUpdaterDialog(this, syncManager) { apkFile ->
             pendingApkFile = apkFile
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -91,9 +89,20 @@ class MainActivity : AppCompatActivity() {
         }
 
         buildRootLayout()
+        applySyncSnapshot(syncManager.getCurrentSnapshot())
         setupWebView()
         setupBackNavigation()
         syncManager.startMonitoring()
+    }
+
+    private fun applySyncSnapshot(snapshot: SyncStatusSnapshot) {
+        if (isFinishing || isDestroyed) return
+        if (!::syncBadgeText.isInitialized) return
+        syncBadgeText.text = snapshot.label
+        try {
+            syncBadgeText.setTextColor(Color.parseColor(snapshot.colorHex))
+        } catch (_: Exception) {
+        }
     }
 
     private fun setupOledWindow() {
@@ -135,12 +144,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         syncBadgeText = TextView(this).apply {
-            text = "100% Offline"
-            setTextColor(Color.parseColor("#4ADE80"))
+            text = "↻ Connecting..."
+            setTextColor(Color.parseColor("#60A5FA"))
             textSize = 11f
-            setPadding(dp(8), dp(2), dp(8), dp(2))
+            maxLines = 1
+            ellipsize = TextUtils.TruncateAt.END
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            isClickable = true
+            isFocusable = true
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                 marginStart = dp(6)
+            }
+            setOnClickListener {
+                syncManager.triggerSyncNow(forceHealth = true)
+                updaterDialog.showSyncDialog {
+                    if (!isFinishing && !isDestroyed && ::webView.isInitialized) {
+                        webView.reload()
+                    }
+                }
             }
         }
 
@@ -322,10 +343,12 @@ class MainActivity : AppCompatActivity() {
                 val res = localApi.handle(method, path, body)
                 val b64 = Base64.encodeToString(res.bodyJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
                 runOnUiThread {
-                    webView.evaluateJavascript(
-                        "window.__bacApiResolve('$reqId', ${res.status}, '$b64');",
-                        null
-                    )
+                    if (!isFinishing && !isDestroyed && ::webView.isInitialized) {
+                        webView.evaluateJavascript(
+                            "window.__bacApiResolve('$reqId', ${res.status}, '$b64');",
+                            null
+                        )
+                    }
                 }
             }
         }
@@ -334,7 +357,7 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         webView.onResume()
-        syncManager.triggerSyncNow()
+        syncManager.triggerSyncNow(forceHealth = true)
     }
 
     override fun onPause() {

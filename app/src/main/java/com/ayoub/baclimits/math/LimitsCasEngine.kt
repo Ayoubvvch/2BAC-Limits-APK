@@ -116,6 +116,12 @@ object LimitsCasEngine {
 
     private val SEED_REGEX = Regex("^2BAC-([A-Z0-9]{4})-L([123])-([0-9A-F]{8})$")
 
+    fun isValidSeed(seedRaw: String): Boolean {
+        val clean = seedRaw.trim().uppercase()
+        val m = SEED_REGEX.matchEntire(clean) ?: return false
+        return CODE_TO_TECH.containsKey(m.groupValues[1])
+    }
+
     fun parseSeed(seedRaw: String): Triple<String, Int, Long> {
         val clean = seedRaw.trim().uppercase()
         val m = SEED_REGEX.matchEntire(clean)

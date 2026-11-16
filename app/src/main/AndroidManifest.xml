@@ -14,7 +14,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BacLimits"
         android:hardwareAccelerated="true"
-        android:usesCleartextTraffic="false"
+        android:usesCleartextTraffic="true"
         android:networkSecurityConfig="@xml/network_security_config"
         tools:targetApi="34">
 

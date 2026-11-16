@@ -27,6 +27,8 @@ import android.widget.Toast
 import androidx.core.content.FileProvider
 import com.ayoub.baclimits.BuildConfig
 import com.ayoub.baclimits.data.ProgressSyncManager
+import com.ayoub.baclimits.data.RemoteSyncProtocol
+import com.ayoub.baclimits.data.SyncStatusSnapshot
 import org.json.JSONObject
 import java.io.BufferedReader
 import java.io.File
@@ -34,6 +36,9 @@ import java.io.FileOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.concurrent.Executors
 
 class InAppUpdaterDialog(
@@ -172,7 +177,7 @@ class InAppUpdaterDialog(
 
         // Divider + Optional Private Repo Auth & Progress Sync Settings
         val settingsToggle = TextView(context).apply {
-            text = "⚙ Sync & Private Repo Auth Settings"
+            text = "⚙ Backend Server, Sync & Private Repo Auth"
             setTextColor(Color.parseColor("#2DD4BF"))
             textSize = 13f
             setTypeface(null, Typeface.BOLD)
@@ -188,14 +193,18 @@ class InAppUpdaterDialog(
         }
 
         val syncInfo = TextView(context).apply {
-            text = "Pending local sync events: ${syncManager.getPendingCount()}"
-            setTextColor(Color.parseColor("#9CA3AF"))
+            val snap = syncManager.getCurrentSnapshot()
+            text = "${snap.label} • Pending queue: ${snap.pendingCount}"
+            setTextColor(Color.parseColor(snap.colorHex))
             textSize = 12f
             setPadding(0, 0, 0, dp(8))
         }
         settingsBox.addView(syncInfo)
 
-        val syncUrlInput = styledInput("Optional Remote Sync URL (https://...)", syncManager.getSyncUrl())
+        val syncUrlInput = styledInput(
+            "Backend URL (Default: ${RemoteSyncProtocol.DEFAULT_SERVER_URL})",
+            syncManager.getSyncUrl()
+        )
         val syncTokenInput = styledInput("Optional Sync Bearer Token", syncManager.getSyncToken(), isSecret = true)
         val ghPatInput = styledInput(
             "Optional GitHub Token (only if repo becomes Private)",
@@ -203,12 +212,17 @@ class InAppUpdaterDialog(
             isSecret = true
         )
 
-        settingsBox.addView(label("Remote Progress Sync URL"))
+        settingsBox.addView(label("Backend / Sync Server URL (Default: ${RemoteSyncProtocol.DEFAULT_SERVER_URL})"))
         settingsBox.addView(syncUrlInput)
-        settingsBox.addView(label("Sync Bearer Token"))
+        settingsBox.addView(label("Sync Bearer Token (Optional)"))
         settingsBox.addView(syncTokenInput)
         settingsBox.addView(label("GitHub Release Token (for Private Repos)"))
         settingsBox.addView(ghPatInput)
+
+        val syncSettingsBtnRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(10), 0, 0)
+        }
 
         val saveSettingsBtn = Button(context).apply {
             text = "Save & Sync Now"
@@ -216,14 +230,22 @@ class InAppUpdaterDialog(
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
             background = pillBg("#0F766E", "#2DD4BF", 10)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                dp(40)
-            ).apply {
-                topMargin = dp(10)
+            layoutParams = LinearLayout.LayoutParams(0, dp(40), 1f).apply {
+                marginEnd = dp(8)
             }
         }
-        settingsBox.addView(saveSettingsBtn)
+
+        val resetDefaultBtn = Button(context).apply {
+            text = "Reset Default"
+            isAllCaps = false
+            setTextColor(Color.parseColor("#E5E7EB"))
+            background = pillBg("#121216", "#32323E", 10)
+            layoutParams = LinearLayout.LayoutParams(dp(116), dp(40))
+        }
+
+        syncSettingsBtnRow.addView(saveSettingsBtn)
+        syncSettingsBtnRow.addView(resetDefaultBtn)
+        settingsBox.addView(syncSettingsBtnRow)
         root.addView(settingsBox)
 
         settingsToggle.setOnClickListener {
@@ -234,10 +256,31 @@ class InAppUpdaterDialog(
             prefs.edit().putString(KEY_GITHUB_PAT, ghPatInput.text.toString().trim()).apply()
             syncManager.saveSyncConfig(
                 syncUrlInput.text.toString(),
-                syncTokenInput.text.toString()
+                syncTokenInput.text.toString(),
+                triggerSync = false
             )
+            syncUrlInput.setText(syncManager.getSyncUrl())
             Toast.makeText(context, "Configuration saved", Toast.LENGTH_SHORT).show()
-            syncInfo.text = "Pending local sync events: ${syncManager.getPendingCount()}"
+            syncManager.triggerSyncNow(forceHealth = true) { snap ->
+                mainHandler.post {
+                    if (!dialog.isShowing) return@post
+                    syncInfo.text = "${snap.label} • Pending queue: ${snap.pendingCount}"
+                    try { syncInfo.setTextColor(Color.parseColor(snap.colorHex)) } catch (_: Exception) {}
+                }
+            }
+        }
+
+        resetDefaultBtn.setOnClickListener {
+            syncManager.resetToDefaultServer(triggerSync = false)
+            syncUrlInput.setText(RemoteSyncProtocol.DEFAULT_SERVER_URL)
+            Toast.makeText(context, "Reset to ${RemoteSyncProtocol.DEFAULT_SERVER_URL}", Toast.LENGTH_SHORT).show()
+            syncManager.triggerSyncNow(forceHealth = true) { snap ->
+                mainHandler.post {
+                    if (!dialog.isShowing) return@post
+                    syncInfo.text = "${snap.label} • Pending queue: ${snap.pendingCount}"
+                    try { syncInfo.setTextColor(Color.parseColor(snap.colorHex)) } catch (_: Exception) {}
+                }
+            }
         }
 
         closeBtn.setOnClickListener {
@@ -301,6 +344,248 @@ class InAppUpdaterDialog(
         )
         dialog.show()
         performCheck()
+    }
+
+    fun showSyncDialog(onRefreshAccount: () -> Unit) {
+        val dialog = Dialog(context)
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE)
+        dialog.window?.setBackgroundDrawable(GradientDrawable().apply {
+            setColor(Color.parseColor("#000000"))
+            cornerRadius = dp(16).toFloat()
+            setStroke(dp(1), Color.parseColor("#24242C"))
+        })
+
+        val scroll = ScrollView(context).apply {
+            setBackgroundColor(Color.TRANSPARENT)
+        }
+
+        val root = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(20), dp(20), dp(20))
+        }
+
+        val titleRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val titleView = TextView(context).apply {
+            text = "Server & Account Sync"
+            setTextColor(Color.parseColor("#F8FAFC"))
+            textSize = 17f
+            setTypeface(null, Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        val statusPill = TextView(context).apply {
+            textSize = 11.5f
+            setTypeface(null, Typeface.BOLD)
+            setPadding(dp(10), dp(4), dp(10), dp(4))
+            background = pillBg("#09090B", "#24242C", 99)
+        }
+        titleRow.addView(titleView)
+        titleRow.addView(statusPill)
+        root.addView(titleRow)
+
+        val statusCard = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = pillBg("#09090B", "#24242C", 12)
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            ).apply {
+                topMargin = dp(14)
+            }
+        }
+
+        val networkStatusText = TextView(context).apply {
+            textSize = 12.5f
+            setTextColor(Color.parseColor("#E5E7EB"))
+        }
+        val serverStatusText = TextView(context).apply {
+            textSize = 12.5f
+            setTextColor(Color.parseColor("#E5E7EB"))
+            setPadding(0, dp(4), 0, 0)
+        }
+        val pendingText = TextView(context).apply {
+            textSize = 12.5f
+            setTextColor(Color.parseColor("#9CA3AF"))
+            setPadding(0, dp(4), 0, 0)
+        }
+        val lastSyncText = TextView(context).apply {
+            textSize = 12.5f
+            setTextColor(Color.parseColor("#9CA3AF"))
+            setPadding(0, dp(4), 0, 0)
+        }
+        val lastErrorText = TextView(context).apply {
+            textSize = 12f
+            setTextColor(Color.parseColor("#FBBF24"))
+            setPadding(0, dp(6), 0, 0)
+            visibility = View.GONE
+        }
+
+        statusCard.addView(networkStatusText)
+        statusCard.addView(serverStatusText)
+        statusCard.addView(pendingText)
+        statusCard.addView(lastSyncText)
+        statusCard.addView(lastErrorText)
+        root.addView(statusCard)
+
+        val urlInput = styledInput(
+            "Backend URL (Default: ${RemoteSyncProtocol.DEFAULT_SERVER_URL})",
+            syncManager.getSyncUrl()
+        )
+        val tokenInput = styledInput("Optional Bearer Token", syncManager.getSyncToken(), isSecret = true)
+
+        root.addView(label("Backend / Sync Server URL (Default: ${RemoteSyncProtocol.DEFAULT_SERVER_URL})"))
+        root.addView(urlInput)
+        root.addView(label("Sync Bearer Token (Optional)"))
+        root.addView(tokenInput)
+
+        val renderSnapshot: (SyncStatusSnapshot) -> Unit = { snap ->
+            statusPill.text = snap.label
+            try {
+                statusPill.setTextColor(Color.parseColor(snap.colorHex))
+                statusPill.background = pillBg("#09090B", snap.colorHex, 99)
+            } catch (_: Exception) {
+            }
+            networkStatusText.text = "Device Network: ${if (snap.isNetworkConnected) "Connected" else "Offline"}"
+            serverStatusText.text = "Server (${snap.serverUrl}): ${if (snap.isServerReachable) "Reachable ✓" else "Unreachable"}"
+            pendingText.text = "Pending Offline Events: ${snap.pendingCount}"
+            lastSyncText.text = "Last Successful Sync: ${formatSyncTimestamp(snap.lastSyncAt)}"
+            if (!snap.lastError.isNullOrBlank() && !snap.isServerReachable) {
+                lastErrorText.text = "Last Error: ${snap.lastError}"
+                lastErrorText.visibility = View.VISIBLE
+            } else {
+                lastErrorText.visibility = View.GONE
+            }
+        }
+
+        val primaryRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(14), 0, 0)
+        }
+        val syncRefreshBtn = Button(context).apply {
+            text = "Sync & Refresh Account"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            background = pillBg("#2563EB", "#3B82F6", 10)
+            layoutParams = LinearLayout.LayoutParams(0, dp(42), 1f).apply {
+                marginEnd = dp(8)
+            }
+        }
+        val saveUrlBtn = Button(context).apply {
+            text = "Save URL"
+            isAllCaps = false
+            setTextColor(Color.WHITE)
+            setTypeface(null, Typeface.BOLD)
+            background = pillBg("#0F766E", "#2DD4BF", 10)
+            layoutParams = LinearLayout.LayoutParams(dp(106), dp(42))
+        }
+        primaryRow.addView(syncRefreshBtn)
+        primaryRow.addView(saveUrlBtn)
+        root.addView(primaryRow)
+
+        val secondaryRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(8), 0, 0)
+        }
+        val resetBtn = Button(context).apply {
+            text = "Reset Default"
+            isAllCaps = false
+            setTextColor(Color.parseColor("#E5E7EB"))
+            background = pillBg("#121216", "#32323E", 10)
+            layoutParams = LinearLayout.LayoutParams(0, dp(38), 1f).apply {
+                marginEnd = dp(8)
+            }
+        }
+        val closeBtn = Button(context).apply {
+            text = "Close"
+            isAllCaps = false
+            setTextColor(Color.parseColor("#E5E7EB"))
+            background = pillBg("#121216", "#32323E", 10)
+            layoutParams = LinearLayout.LayoutParams(dp(96), dp(38))
+        }
+        secondaryRow.addView(resetBtn)
+        secondaryRow.addView(closeBtn)
+        root.addView(secondaryRow)
+
+        renderSnapshot(syncManager.getCurrentSnapshot())
+
+        syncRefreshBtn.setOnClickListener {
+            syncRefreshBtn.isEnabled = false
+            syncRefreshBtn.text = "Syncing..."
+            syncManager.saveSyncConfig(urlInput.text.toString(), tokenInput.text.toString(), triggerSync = false)
+            urlInput.setText(syncManager.getSyncUrl())
+            syncManager.triggerSyncNow(forceHealth = true) { snap ->
+                mainHandler.post {
+                    if (!dialog.isShowing) return@post
+                    syncRefreshBtn.isEnabled = true
+                    syncRefreshBtn.text = "Sync & Refresh Account"
+                    renderSnapshot(snap)
+                    onRefreshAccount()
+                    if (snap.isServerReachable) {
+                        Toast.makeText(context, "Synced with ${snap.serverUrl}", Toast.LENGTH_SHORT).show()
+                        dialog.dismiss()
+                    }
+                }
+            }
+        }
+
+        saveUrlBtn.setOnClickListener {
+            saveUrlBtn.isEnabled = false
+            syncManager.saveSyncConfig(urlInput.text.toString(), tokenInput.text.toString(), triggerSync = false)
+            urlInput.setText(syncManager.getSyncUrl())
+            syncManager.triggerSyncNow(forceHealth = true) { snap ->
+                mainHandler.post {
+                    if (!dialog.isShowing) return@post
+                    saveUrlBtn.isEnabled = true
+                    renderSnapshot(snap)
+                    Toast.makeText(
+                        context,
+                        if (snap.isServerReachable) "Connected to ${snap.serverUrl}" else "Saved ${snap.serverUrl} (currently unreachable)",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+
+        resetBtn.setOnClickListener {
+            syncManager.resetToDefaultServer(triggerSync = false)
+            urlInput.setText(RemoteSyncProtocol.DEFAULT_SERVER_URL)
+            syncManager.triggerSyncNow(forceHealth = true) { snap ->
+                mainHandler.post {
+                    if (!dialog.isShowing) return@post
+                    renderSnapshot(snap)
+                    Toast.makeText(context, "Reset to ${RemoteSyncProtocol.DEFAULT_SERVER_URL}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        closeBtn.setOnClickListener { dialog.dismiss() }
+
+        scroll.addView(root)
+        dialog.setContentView(scroll)
+        dialog.window?.setLayout(
+            (context.resources.displayMetrics.widthPixels * 0.92).toInt(),
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+        dialog.show()
+
+        syncManager.triggerSyncNow(forceHealth = true) { snap ->
+            mainHandler.post {
+                if (dialog.isShowing) renderSnapshot(snap)
+            }
+        }
+    }
+
+    private fun formatSyncTimestamp(millis: Long): String {
+        if (millis <= 0L) return "Never"
+        return try {
+            SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(millis))
+        } catch (_: Exception) {
+            millis.toString()
+        }
     }
 
     private fun checkLatestRelease(

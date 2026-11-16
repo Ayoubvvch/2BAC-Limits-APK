@@ -89,8 +89,8 @@ jobs:
             ### 2BAC Limits — Native Android Release (v${{ steps.prepare_apk.outputs.version }})
 
             - **100% Content & Design Fidelity**: Preserves the original `index.html`, `styles.css`, and `app.js` byte-for-byte in OLED Black Mode (`#000000`).
-            - **100% Offline-First CAS Engine**: Deterministic parametric limit generator across all 6 techniques (`poly_factor`, `sqrt_conjugate`, `nth_root`, `add_sub_zero`, `trig`, `hybrid`), symbolic equivalence checker, bilingual AR/FR hints & step-by-step solutions, and bundled offline KaTeX 0.16.11.
-            - **Automatic Progress Persistence & Sync**: Local SQLite history, mastery bars, and streak tracking with background sync queue when online.
+            - **Online-First Backend Sync + Offline CAS Engine**: Connects to the live FastAPI + SymPy backend (`http://51.170.138.59`) when online so existing usernames restore stats, mastery, history, and active exercises immediately, with seamless offline fallback to the deterministic Kotlin CAS engine across all 6 techniques (`poly_factor`, `sqrt_conjugate`, `nth_root`, `add_sub_zero`, `trig`, `hybrid`) and bundled offline KaTeX 0.16.11.
+            - **Live Sync Status & Offline Cache (`StudentDatabase` + `ProgressSyncManager`)**: Accurate connectivity & `/api/health` reachability detection, tappable sync diagnostics/server URL dialog, SQLite v2 server cache, and queued event replay.
             - **Persistent V1+V2+V3+V4 Signing**: Signed with `app/keystore/release.jks` for seamless in-place OTA upgrades without uninstalling.
             - **Integrated In-App Updater**: Live download progress bar with `FileProvider` package installation and optional private-repo token support.
           files: ${{ steps.prepare_apk.outputs.apk_path }}
