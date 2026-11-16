@@ -907,6 +907,36 @@ class StudentDatabase(context: Context) :
     }
 
     @Synchronized
+    fun getLastActiveStudent(): Pair<String, String>? {
+        val c = readableDatabase.rawQuery(
+            "SELECT display_name, lang FROM students ORDER BY updated_at DESC LIMIT 1",
+            null
+        )
+        val res = if (c.moveToFirst()) {
+            val name = c.getString(0)
+            val lang = if (c.getString(1) == "fr") "fr" else "ar"
+            if (!name.isNullOrBlank()) name to lang else null
+        } else null
+        c.close()
+        return res
+    }
+
+    @Synchronized
+    fun getRecentUsernames(limit: Int = 6): List<String> {
+        val list = mutableListOf<String>()
+        val c = readableDatabase.rawQuery(
+            "SELECT display_name FROM students ORDER BY updated_at DESC LIMIT ?",
+            arrayOf(limit.toString())
+        )
+        while (c.moveToNext()) {
+            val name = c.getString(0)?.trim().orEmpty()
+            if (name.isNotEmpty()) list.add(name)
+        }
+        c.close()
+        return list
+    }
+
+    @Synchronized
     fun enqueueRemoteEvent(usernameRaw: String, eventType: String, apiPath: String, payload: JSONObject) {
         val key = usernameRaw.trim().lowercase()
         val envelope = JSONObject().apply {
@@ -1048,7 +1078,7 @@ class StudentDatabase(context: Context) :
         val key = usernameKey.lowercase()
         val db = readableDatabase
         val sc = db.rawQuery(
-            "SELECT display_name, total_solved, total_attempts, total_correct, current_streak, remote_stats_json, dirty_offline FROM students WHERE username = ?",
+            "SELECT display_name, total_solved, total_attempts, total_correct, current_streak, remote_stats_json, dirty_offline, lang FROM students WHERE username = ?",
             arrayOf(key)
         )
         if (!sc.moveToFirst()) {
@@ -1062,6 +1092,7 @@ class StudentDatabase(context: Context) :
         val streak = sc.getInt(4)
         val remoteStatsStr = sc.getString(5)
         val dirtyOffline = sc.getInt(6)
+        val studentLang = if (sc.getString(7) == "fr") "fr" else "ar"
         sc.close()
 
         if (!remoteStatsStr.isNullOrBlank() && dirtyOffline == 0) {
@@ -1119,6 +1150,7 @@ class StudentDatabase(context: Context) :
         return JSONObject().apply {
             put("username", key)
             put("display_name", display)
+            put("preferred_lang", studentLang)
             put("total_solved", solved)
             put("accuracy", accuracy)
             put("current_streak", streak)

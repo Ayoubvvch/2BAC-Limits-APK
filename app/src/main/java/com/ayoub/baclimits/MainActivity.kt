@@ -1,65 +1,98 @@
 package com.ayoub.baclimits
 
-import android.annotation.SuppressLint
 import android.content.Intent
-import android.graphics.Color
-import android.graphics.Typeface
-import android.graphics.drawable.GradientDrawable
+import android.graphics.Color as AndroidColor
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.text.TextUtils
-import android.util.Base64
-import android.view.Gravity
-import android.view.View
-import android.view.ViewGroup
-import android.webkit.JavascriptInterface
-import android.webkit.WebResourceRequest
-import android.webkit.WebResourceResponse
-import android.webkit.WebSettings
-import android.webkit.WebView
-import android.webkit.WebViewClient
-import android.widget.LinearLayout
-import android.widget.TextView
 import android.widget.Toast
-import androidx.activity.OnBackPressedCallback
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.viewModels
+import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Functions
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Insights
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Translate
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import androidx.webkit.WebViewAssetLoader
-import androidx.webkit.WebViewCompat
-import androidx.webkit.WebViewFeature
-import com.ayoub.baclimits.data.LocalLimitsApi
-import com.ayoub.baclimits.data.ProgressSyncManager
-import com.ayoub.baclimits.data.StudentDatabase
-import com.ayoub.baclimits.data.SyncStatusSnapshot
-import com.ayoub.baclimits.updater.InAppUpdaterDialog
-import java.io.ByteArrayInputStream
-import java.io.File
-import java.util.concurrent.Executors
+import com.ayoub.baclimits.ui.BacLimitsViewModel
+import com.ayoub.baclimits.ui.MainTab
+import com.ayoub.baclimits.ui.components.DifficultyPickerSheet
+import com.ayoub.baclimits.ui.components.FullscreenFormulaDialog
+import com.ayoub.baclimits.ui.components.LoadSeedDialog
+import com.ayoub.baclimits.ui.components.SolutionSheet
+import com.ayoub.baclimits.ui.components.SyncStatusSheet
+import com.ayoub.baclimits.ui.components.TechniquePickerSheet
+import com.ayoub.baclimits.ui.components.UpdaterSheet
+import com.ayoub.baclimits.ui.i18n.AppStrings
+import com.ayoub.baclimits.ui.screens.HistoryScreen
+import com.ayoub.baclimits.ui.screens.LoginScreen
+import com.ayoub.baclimits.ui.screens.PracticeScreen
+import com.ayoub.baclimits.ui.screens.ProgressScreen
+import com.ayoub.baclimits.ui.screens.SettingsScreen
+import com.ayoub.baclimits.ui.theme.BacLimitsTheme
+import com.ayoub.baclimits.ui.theme.OledColors
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var webView: WebView
-    private lateinit var syncBadgeText: TextView
-    private lateinit var db: StudentDatabase
-    private lateinit var localApi: LocalLimitsApi
-    private lateinit var syncManager: ProgressSyncManager
-    private lateinit var updaterDialog: InAppUpdaterDialog
-
-    private val apiExecutor = Executors.newFixedThreadPool(4)
-    private var pendingApkFile: File? = null
+    private val viewModel: BacLimitsViewModel by viewModels()
 
     private val installPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && packageManager.canRequestPackageInstalls()) {
-            pendingApkFile?.let { file ->
-                updaterDialog.launchInstaller(file)
-                pendingApkFile = null
-            }
+            viewModel.onInstallPermissionGranted()
         } else {
             Toast.makeText(this, "Install permission denied", Toast.LENGTH_SHORT).show()
         }
@@ -67,365 +100,461 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setupOledSystemBars()
 
-        setupOledWindow()
-
-        db = StudentDatabase(this)
-        syncManager = ProgressSyncManager(this, db) { snapshot ->
-            runOnUiThread {
-                applySyncSnapshot(snapshot)
-            }
-        }
-        localApi = LocalLimitsApi(db, syncManager)
-        updaterDialog = InAppUpdaterDialog(this, syncManager) { apkFile ->
-            pendingApkFile = apkFile
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                Toast.makeText(this, "Allow 2BAC Limits to install app updates", Toast.LENGTH_LONG).show()
-                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:$packageName")
+        setContent {
+            BacLimitsTheme {
+                val pendingInstall by viewModel.pendingInstallFile.collectAsState()
+                LaunchedEffect(pendingInstall) {
+                    if (pendingInstall != null) {
+                        viewModel.consumePendingInstallRequest()
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Allow 2BAC Limits to install app updates",
+                                Toast.LENGTH_LONG
+                            ).show()
+                            val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                                data = Uri.parse("package:$packageName")
+                            }
+                            installPermissionLauncher.launch(intent)
+                        }
+                    }
                 }
-                installPermissionLauncher.launch(intent)
+
+                BacLimitsRootApp(viewModel = viewModel)
             }
         }
-
-        buildRootLayout()
-        applySyncSnapshot(syncManager.getCurrentSnapshot())
-        setupWebView()
-        setupBackNavigation()
-        syncManager.startMonitoring()
     }
 
-    private fun applySyncSnapshot(snapshot: SyncStatusSnapshot) {
-        if (isFinishing || isDestroyed) return
-        if (!::syncBadgeText.isInitialized) return
-        syncBadgeText.text = snapshot.label
-        try {
-            syncBadgeText.setTextColor(Color.parseColor(snapshot.colorHex))
-        } catch (_: Exception) {
-        }
-    }
-
-    private fun setupOledWindow() {
-        WindowCompat.setDecorFitsSystemWindows(window, true)
-        window.statusBarColor = Color.BLACK
-        window.navigationBarColor = Color.BLACK
+    @Suppress("DEPRECATION")
+    private fun setupOledSystemBars() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.statusBarColor = AndroidColor.BLACK
+        window.navigationBarColor = AndroidColor.BLACK
         val controller = WindowInsetsControllerCompat(window, window.decorView)
         controller.isAppearanceLightStatusBars = false
         controller.isAppearanceLightNavigationBars = false
     }
 
-    private fun buildRootLayout() {
-        val root = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.BLACK)
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT
-            )
-        }
-
-        // Ultra-slim native OLED utility bar (never overlaps page buttons)
-        val utilityBar = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setBackgroundColor(Color.BLACK)
-            setPadding(dp(12), dp(6), dp(12), dp(6))
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-            )
-        }
-
-        val versionLabel = TextView(this).apply {
-            text = "2BAC Limits • v${BuildConfig.VERSION_NAME}"
-            setTextColor(Color.parseColor("#9CA3AF"))
-            textSize = 11.5f
-            setTypeface(null, Typeface.BOLD)
-        }
-
-        syncBadgeText = TextView(this).apply {
-            text = "↻ Connecting..."
-            setTextColor(Color.parseColor("#60A5FA"))
-            textSize = 11f
-            maxLines = 1
-            ellipsize = TextUtils.TruncateAt.END
-            setPadding(dp(8), dp(4), dp(8), dp(4))
-            isClickable = true
-            isFocusable = true
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                marginStart = dp(6)
-            }
-            setOnClickListener {
-                syncManager.triggerSyncNow(forceHealth = true)
-                updaterDialog.showSyncDialog {
-                    if (!isFinishing && !isDestroyed && ::webView.isInitialized) {
-                        webView.reload()
-                    }
-                }
-            }
-        }
-
-        val updateBtn = TextView(this).apply {
-            text = "↻ Update"
-            setTextColor(Color.parseColor("#60A5FA"))
-            textSize = 11.5f
-            setTypeface(null, Typeface.BOLD)
-            setPadding(dp(10), dp(4), dp(10), dp(4))
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#09090B"))
-                cornerRadius = dp(99).toFloat()
-                setStroke(dp(1), Color.parseColor("#24242C"))
-            }
-            setOnClickListener { updaterDialog.show() }
-        }
-
-        utilityBar.addView(versionLabel)
-        utilityBar.addView(syncBadgeText)
-        utilityBar.addView(updateBtn)
-
-        val divider = View(this).apply {
-            setBackgroundColor(Color.parseColor("#181820"))
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 1)
-        }
-
-        webView = WebView(this).apply {
-            setBackgroundColor(Color.BLACK)
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            )
-        }
-
-        root.addView(utilityBar)
-        root.addView(divider)
-        root.addView(webView)
-        setContentView(root)
-    }
-
-    @SuppressLint("SetJavaScriptEnabled")
-    private fun setupWebView() {
-        val assetLoader = WebViewAssetLoader.Builder()
-            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
-            .build()
-
-        webView.settings.apply {
-            javaScriptEnabled = true
-            domStorageEnabled = true
-            databaseEnabled = true
-            cacheMode = WebSettings.LOAD_DEFAULT
-            useWideViewPort = true
-            loadWithOverviewMode = true
-            builtInZoomControls = false
-            displayZoomControls = false
-            mediaPlaybackRequiresUserGesture = false
-        }
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
-        webView.overScrollMode = View.OVER_SCROLL_NEVER
-
-        webView.addJavascriptInterface(AndroidApiBridge(), "AndroidApiBridge")
-
-        if (WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-            WebViewCompat.addDocumentStartJavaScript(
-                webView,
-                FETCH_BRIDGE_JS,
-                setOf("https://appassets.androidplatform.net")
-            )
-        }
-
-        webView.webViewClient = object : WebViewClient() {
-            override fun shouldInterceptRequest(
-                view: WebView?,
-                request: WebResourceRequest
-            ): WebResourceResponse? {
-                val uri = request.url
-                val host = uri.host.orEmpty()
-                val path = uri.path.orEmpty()
-
-                // 1. Offline bundled KaTeX 0.16.11 assets
-                if (host == "cdn.jsdelivr.net" && path.startsWith("/npm/katex@0.16.11/dist/")) {
-                    val rel = path.removePrefix("/npm/katex@0.16.11/dist/")
-                    return serveAssetFile("vendor/katex/$rel")
-                }
-
-                // 2. Fast-fail Google Fonts when offline so boot never hangs
-                if (host == "fonts.googleapis.com" && !syncManager.isNetworkConnected()) {
-                    return WebResourceResponse(
-                        "text/css",
-                        "UTF-8",
-                        200,
-                        "OK",
-                        mapOf("Cache-Control" to "no-store"),
-                        ByteArrayInputStream(ByteArray(0))
-                    )
-                }
-
-                // 3. Security shield stub paths referenced by untouched index.html
-                if (host == "appassets.androidplatform.net") {
-                    if (path == "/security-shield.css") {
-                        return WebResourceResponse(
-                            "text/css",
-                            "UTF-8",
-                            ByteArrayInputStream("/* AcMods Shield */".toByteArray())
-                        )
-                    }
-                    if (path == "/security-shield.js") {
-                        return WebResourceResponse(
-                            "application/javascript",
-                            "UTF-8",
-                            ByteArrayInputStream("/* AcMods Shield */".toByteArray())
-                        )
-                    }
-                    return assetLoader.shouldInterceptRequest(uri)
-                }
-
-                return super.shouldInterceptRequest(view, request)
-            }
-
-            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
-                super.onPageStarted(view, url, favicon)
-                // Fallback bridge injection for older WebView implementations
-                if (!WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)) {
-                    view?.evaluateJavascript(FETCH_BRIDGE_JS, null)
-                }
-            }
-        }
-
-        webView.loadUrl("https://appassets.androidplatform.net/assets/index.html")
-    }
-
-    private fun serveAssetFile(assetPath: String): WebResourceResponse? {
-        return try {
-            val clean = assetPath.trimStart('/')
-            val mime = when {
-                clean.endsWith(".css") -> "text/css"
-                clean.endsWith(".js") -> "application/javascript"
-                clean.endsWith(".woff2") -> "font/woff2"
-                clean.endsWith(".woff") -> "font/woff"
-                clean.endsWith(".ttf") -> "font/ttf"
-                else -> "application/octet-stream"
-            }
-            val stream = assets.open(clean)
-            val enc = if (mime.startsWith("text/") || mime == "application/javascript") "UTF-8" else null
-            WebResourceResponse(
-                mime,
-                enc,
-                200,
-                "OK",
-                mapOf(
-                    "Access-Control-Allow-Origin" to "*",
-                    "Cache-Control" to "max-age=31536000"
-                ),
-                stream
-            )
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun setupBackNavigation() {
-        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (webView.canGoBack()) {
-                    webView.goBack()
-                } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
-                }
-            }
-        })
-    }
-
-    inner class AndroidApiBridge {
-        @JavascriptInterface
-        fun request(reqId: String, method: String, path: String, body: String?) {
-            apiExecutor.execute {
-                val res = localApi.handle(method, path, body)
-                val b64 = Base64.encodeToString(res.bodyJson.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
-                runOnUiThread {
-                    if (!isFinishing && !isDestroyed && ::webView.isInitialized) {
-                        webView.evaluateJavascript(
-                            "window.__bacApiResolve('$reqId', ${res.status}, '$b64');",
-                            null
-                        )
-                    }
-                }
-            }
-        }
-    }
-
     override fun onResume() {
         super.onResume()
-        webView.onResume()
-        syncManager.triggerSyncNow(forceHealth = true)
+        viewModel.onAppResumed()
+    }
+}
+
+@Composable
+private fun BacLimitsRootApp(viewModel: BacLimitsViewModel) {
+    val ui by viewModel.uiState.collectAsState()
+    val syncState by viewModel.syncState.collectAsState()
+    val updateState by viewModel.updateState.collectAsState()
+
+    val strings = remember(ui.lang) { AppStrings.forLang(ui.lang) }
+    val layoutDirection = if (ui.lang == "ar") LayoutDirection.Rtl else LayoutDirection.Ltr
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(ui.snackbarMessage) {
+        val msg = ui.snackbarMessage
+        if (!msg.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearSnackbar()
+        }
     }
 
-    override fun onPause() {
-        webView.onPause()
-        super.onPause()
-    }
+    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+        if (ui.username == null) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                LoginScreen(
+                    strings = strings,
+                    syncState = syncState,
+                    recentUsers = ui.recentUsers,
+                    isLoggingIn = ui.isLoggingIn,
+                    loginError = ui.loginError,
+                    onLogin = { name -> viewModel.login(name) },
+                    onToggleLanguage = { viewModel.toggleLanguage() },
+                    onOpenSyncSheet = { viewModel.setShowSyncSheet(true) }
+                )
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(12.dp)
+                )
+            }
+        } else {
+            BackHandler(enabled = ui.selectedTab != MainTab.Practice) {
+                viewModel.selectTab(MainTab.Practice)
+            }
 
-    override fun onDestroy() {
-        syncManager.stopMonitoring()
-        apiExecutor.shutdownNow()
-        webView.destroy()
-        super.onDestroy()
-    }
-
-    private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
-
-    companion object {
-        private val FETCH_BRIDGE_JS = """
-            (() => {
-              if (window.__bacFetchInstalled) return;
-              window.__bacFetchInstalled = true;
-              const pending = new Map();
-              let seq = 0;
-
-              window.__bacApiResolve = function(id, status, b64) {
-                const resolver = pending.get(id);
-                if (!resolver) return;
-                pending.delete(id);
-                try {
-                  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-                  const text = new TextDecoder('utf-8').decode(bytes);
-                  resolver.resolve(new Response(text, {
-                    status: status,
-                    headers: { 'Content-Type': 'application/json; charset=utf-8' }
-                  }));
-                } catch (err) {
-                  resolver.reject(err);
+            Scaffold(
+                containerColor = OledColors.Background,
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    NativeTopBar(
+                        strings = strings,
+                        syncState = syncState,
+                        hasUpdate = updateState.hasUpdate,
+                        onOpenUpdater = { viewModel.setShowUpdaterSheet(true) },
+                        onOpenSyncSheet = {
+                            viewModel.syncManager.triggerSyncNow(forceHealth = true)
+                            viewModel.setShowSyncSheet(true)
+                        },
+                        onToggleLanguage = { viewModel.toggleLanguage() }
+                    )
+                },
+                bottomBar = {
+                    NativeBottomNav(
+                        selectedTab = ui.selectedTab,
+                        strings = strings,
+                        hasUpdate = updateState.hasUpdate,
+                        onSelectTab = { viewModel.selectTab(it) }
+                    )
                 }
-              };
+            ) { innerPadding ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    Crossfade(
+                        targetState = ui.selectedTab,
+                        label = "main_tab_crossfade"
+                    ) { tab ->
+                        when (tab) {
+                            MainTab.Practice -> PracticeScreen(
+                                ui = ui,
+                                strings = strings,
+                                onOpenTechniqueSheet = { viewModel.setShowTechniqueSheet(true) },
+                                onOpenDifficultySheet = { viewModel.setShowDifficultySheet(true) },
+                                onNewExercise = { viewModel.loadNextExercise(seed = null) },
+                                onOpenSeedDialog = { viewModel.setShowSeedDialog(true) },
+                                onOpenFullscreenFormula = { viewModel.openFullscreenFormula(it) },
+                                onRequestHint = { viewModel.requestNextHint() },
+                                onOpenSolution = { viewModel.openSolutionSheet() },
+                                onAnswerChange = { viewModel.updateAnswerField(it) },
+                                onInsertToken = { tok, back -> viewModel.insertMathToken(tok, back) },
+                                onBackspace = { viewModel.backspaceMathInput() },
+                                onClear = { viewModel.clearMathInput() },
+                                onSubmitAnswer = { viewModel.submitAnswer() },
+                                onToggleSystemKeyboard = { viewModel.toggleSystemKeyboard() },
+                                onSeedCopied = { msg -> viewModel.showSnackbar(msg) }
+                            )
 
-              const origFetch = window.fetch ? window.fetch.bind(window) : null;
-              window.fetch = function(input, init) {
-                const rawUrl = (typeof input === 'string') ? input : (input && input.url ? input.url : '');
-                let path = rawUrl;
-                try {
-                  const u = new URL(rawUrl, window.location.href);
-                  if (u.origin === window.location.origin) {
-                    path = u.pathname + u.search;
-                  }
-                } catch (_) {}
+                            MainTab.Progress -> ProgressScreen(
+                                displayName = ui.displayName,
+                                username = ui.username ?: "",
+                                stats = ui.stats,
+                                strings = strings,
+                                onRefresh = { viewModel.refreshStatsSilently() },
+                                onPracticeTechnique = { tech -> viewModel.selectTechniqueAndLoad(tech) }
+                            )
 
-                if (path.startsWith('/api/') || path === '/api') {
-                  const method = (init && init.method) ? String(init.method).toUpperCase() : 'GET';
-                  const body = (init && init.body != null) ? String(init.body) : '';
-                  const reqId = 'r_' + (++seq);
-                  return new Promise((resolve, reject) => {
-                    pending.set(reqId, { resolve, reject });
-                    try {
-                      window.AndroidApiBridge.request(reqId, method, path, body);
-                    } catch (e) {
-                      pending.delete(reqId);
-                      reject(e);
+                            MainTab.History -> HistoryScreen(
+                                history = ui.stats?.recentHistory.orEmpty(),
+                                filter = ui.historyFilter,
+                                strings = strings,
+                                onSelectFilter = { viewModel.setHistoryFilter(it) },
+                                onOpenSeed = { seed -> viewModel.loadNextExercise(seed = seed) }
+                            )
+
+                            MainTab.Settings -> SettingsScreen(
+                                displayName = ui.displayName,
+                                username = ui.username ?: "",
+                                lang = ui.lang,
+                                syncState = syncState,
+                                currentServerToken = viewModel.syncManager.getSyncToken(),
+                                isSyncingAccount = ui.isSyncingAccount,
+                                updateState = updateState,
+                                strings = strings,
+                                onSwitchLanguage = { target ->
+                                    if (ui.lang != target) viewModel.toggleLanguage()
+                                },
+                                onLogout = { viewModel.logout() },
+                                onSaveServerConfig = { u, t -> viewModel.saveServerConfig(u, t) },
+                                onResetDefaultServer = { viewModel.resetDefaultServer() },
+                                onSyncAndReload = { viewModel.syncAndReloadAccount() },
+                                onOpenUpdaterSheet = { viewModel.setShowUpdaterSheet(true) }
+                            )
+                        }
                     }
-                  });
                 }
-                return origFetch ? origFetch(input, init) : Promise.reject(new Error('fetch unavailable'));
-              };
-            })();
-        """.trimIndent()
+            }
+        }
+
+        // Modal Sheets & Dialogs
+        if (ui.showTechniqueSheet) {
+            TechniquePickerSheet(
+                selectedTechnique = ui.selectedTechnique,
+                strings = strings,
+                onSelect = { viewModel.selectTechniqueAndLoad(it) },
+                onDismiss = { viewModel.setShowTechniqueSheet(false) }
+            )
+        }
+
+        if (ui.showDifficultySheet) {
+            DifficultyPickerSheet(
+                selectedDifficulty = ui.selectedDifficulty,
+                strings = strings,
+                onSelect = { viewModel.selectDifficultyAndLoad(it) },
+                onDismiss = { viewModel.setShowDifficultySheet(false) }
+            )
+        }
+
+        if (ui.showSeedDialog) {
+            LoadSeedDialog(
+                strings = strings,
+                onConfirmSeed = { seed -> viewModel.loadNextExercise(seed = seed) },
+                onDismiss = { viewModel.setShowSeedDialog(false) }
+            )
+        }
+
+        if (ui.showSolutionSheet) {
+            SolutionSheet(
+                lang = ui.lang,
+                strings = strings,
+                hints = ui.hintsShown,
+                solution = ui.solution,
+                isLoading = ui.isLoadingSolution,
+                onDismiss = { viewModel.setShowSolutionSheet(false) }
+            )
+        }
+
+        if (ui.showSyncSheet) {
+            SyncStatusSheet(
+                syncState = syncState,
+                currentToken = viewModel.syncManager.getSyncToken(),
+                strings = strings,
+                onSaveAndTest = { u, t -> viewModel.saveServerConfig(u, t) },
+                onResetDefault = { viewModel.resetDefaultServer() },
+                onDismiss = { viewModel.setShowSyncSheet(false) }
+            )
+        }
+
+        if (ui.showUpdaterSheet) {
+            UpdaterSheet(
+                updateState = updateState,
+                currentPat = viewModel.updaterManager.getGitHubPat(),
+                strings = strings,
+                onCheckUpdates = { viewModel.updaterManager.checkLatestRelease(silent = false) },
+                onDownloadAndInstall = { viewModel.updaterManager.downloadAndInstall() },
+                onSavePat = { pat ->
+                    viewModel.updaterManager.saveGitHubPat(pat)
+                    viewModel.updaterManager.checkLatestRelease(silent = false)
+                },
+                onDismiss = { viewModel.setShowUpdaterSheet(false) }
+            )
+        }
+
+        val fullLatex = ui.fullscreenFormulaLatex
+        if (!fullLatex.isNullOrBlank()) {
+            FullscreenFormulaDialog(
+                latex = fullLatex,
+                seed = ui.exercise?.seed,
+                strings = strings,
+                onDismiss = { viewModel.closeFullscreenFormula() }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NativeTopBar(
+    strings: AppStrings,
+    syncState: com.ayoub.baclimits.data.SyncStatusSnapshot,
+    hasUpdate: Boolean,
+    onOpenUpdater: () -> Unit,
+    onOpenSyncSheet: () -> Unit,
+    onToggleLanguage: () -> Unit
+) {
+    val dotColor = remember(syncState.colorHex) {
+        try {
+            Color(AndroidColor.parseColor(syncState.colorHex))
+        } catch (_: Exception) {
+            OledColors.Primary
+        }
+    }
+
+    Surface(
+        color = OledColors.Background,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { onOpenUpdater() },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = strings.appTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        color = if (hasUpdate) OledColors.PrimarySoft else OledColors.SurfaceElevated,
+                        shape = RoundedCornerShape(99.dp),
+                        border = BorderStroke(
+                            1.dp,
+                            if (hasUpdate) OledColors.Primary else OledColors.Border
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "v${BuildConfig.VERSION_NAME}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (hasUpdate) Color(0xFF93C5FD) else OledColors.TextSecondary
+                            )
+                            if (hasUpdate) {
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(OledColors.Primary)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = OledColors.Surface,
+                        border = BorderStroke(1.dp, OledColors.Border),
+                        modifier = Modifier.clickable { onOpenSyncSheet() }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(dotColor)
+                            )
+                            Spacer(modifier = Modifier.width(5.dp))
+                            Text(
+                                text = syncState.label
+                                    .replace("●", "")
+                                    .replace("⚠", "")
+                                    .replace("↻", "")
+                                    .trim(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = dotColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(99.dp),
+                        color = OledColors.SurfaceElevated,
+                        border = BorderStroke(1.dp, OledColors.BorderStrong),
+                        modifier = Modifier.clickable { onToggleLanguage() }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Translate,
+                                contentDescription = null,
+                                tint = OledColors.Primary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = strings.switchLangShort,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = OledColors.TextPrimary
+                            )
+                        }
+                    }
+                }
+            }
+            HorizontalDivider(thickness = 1.dp, color = Color(0xFF15151D))
+        }
+    }
+}
+
+@Composable
+private fun NativeBottomNav(
+    selectedTab: MainTab,
+    strings: AppStrings,
+    hasUpdate: Boolean,
+    onSelectTab: (MainTab) -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        HorizontalDivider(thickness = 1.dp, color = Color(0xFF161620))
+        NavigationBar(
+            containerColor = OledColors.NavBar,
+            contentColor = OledColors.TextPrimary,
+            tonalElevation = 0.dp
+        ) {
+            val itemColors = NavigationBarItemDefaults.colors(
+                selectedIconColor = Color(0xFF93C5FD),
+                selectedTextColor = Color(0xFF93C5FD),
+                indicatorColor = OledColors.PrimarySoft,
+                unselectedIconColor = OledColors.TextSecondary,
+                unselectedTextColor = OledColors.TextSecondary
+            )
+
+            NavigationBarItem(
+                selected = selectedTab == MainTab.Practice,
+                onClick = { onSelectTab(MainTab.Practice) },
+                icon = { Icon(Icons.Rounded.Functions, contentDescription = strings.tabPractice) },
+                label = { Text(strings.tabPractice, maxLines = 1, fontWeight = FontWeight.SemiBold) },
+                colors = itemColors
+            )
+            NavigationBarItem(
+                selected = selectedTab == MainTab.Progress,
+                onClick = { onSelectTab(MainTab.Progress) },
+                icon = { Icon(Icons.Rounded.Insights, contentDescription = strings.tabProgress) },
+                label = { Text(strings.tabProgress, maxLines = 1, fontWeight = FontWeight.SemiBold) },
+                colors = itemColors
+            )
+            NavigationBarItem(
+                selected = selectedTab == MainTab.History,
+                onClick = { onSelectTab(MainTab.History) },
+                icon = { Icon(Icons.Rounded.History, contentDescription = strings.tabHistory) },
+                label = { Text(strings.tabHistory, maxLines = 1, fontWeight = FontWeight.SemiBold) },
+                colors = itemColors
+            )
+            NavigationBarItem(
+                selected = selectedTab == MainTab.Settings,
+                onClick = { onSelectTab(MainTab.Settings) },
+                icon = {
+                    if (hasUpdate) {
+                        BadgedBox(badge = { Badge(containerColor = OledColors.Primary) }) {
+                            Icon(Icons.Rounded.Settings, contentDescription = strings.tabSettings)
+                        }
+                    } else {
+                        Icon(Icons.Rounded.Settings, contentDescription = strings.tabSettings)
+                    }
+                },
+                label = { Text(strings.tabSettings, maxLines = 1, fontWeight = FontWeight.SemiBold) },
+                colors = itemColors
+            )
+        }
     }
 }

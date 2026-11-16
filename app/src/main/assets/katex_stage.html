@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="stylesheet" href="./vendor/katex/katex.min.css" />
+  <script src="./vendor/katex/katex.min.js"></script>
+  <script src="./vendor/katex/contrib/auto-render.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: transparent;
+      color: #f8fafc;
+      font-family: sans-serif;
+      overflow-x: hidden;
+      overflow-y: hidden;
+    }
+    #scroller {
+      width: 100%;
+      overflow-x: auto;
+      overflow-y: hidden;
+      direction: ltr;
+      text-align: left;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #scroller::-webkit-scrollbar {
+      display: none;
+    }
+    #stage-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+    #stage-inner {
+      display: inline-block;
+      white-space: nowrap;
+      padding: 8px 16px 8px 6px;
+      color: #ffffff;
+      transform-origin: top left;
+    }
+    .katex-display {
+      margin: 0 !important;
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+    .katex {
+      color: #ffffff;
+      direction: ltr;
+      unicode-bidi: isolate;
+    }
+    #doc-root {
+      display: none;
+      width: 100%;
+      padding: 2px 0 8px;
+    }
+    .doc-section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #fbbf24;
+      margin: 0 0 8px;
+    }
+    .hint-card {
+      background: rgba(251, 191, 36, 0.10);
+      border: 1px solid rgba(251, 191, 36, 0.30);
+      border-radius: 12px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #fef3c7;
+    }
+    .step-card {
+      background: #121218;
+      border: 1px solid #24242f;
+      border-radius: 14px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .step-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #60a5fa;
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+    .step-expl {
+      font-size: 14px;
+      line-height: 1.65;
+      color: #e2e8f0;
+      margin-bottom: 8px;
+    }
+    .step-expl:last-child {
+      margin-bottom: 0;
+    }
+    .step-math-scroll {
+      background: #000000;
+      border: 1px solid #232330;
+      border-radius: 10px;
+      padding: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      direction: ltr;
+      text-align: left;
+      -webkit-overflow-scrolling: touch;
+    }
+    .step-math-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+    .step-math-inner {
+      display: inline-block;
+      white-space: nowrap;
+      padding: 4px 2px;
+      transform-origin: top left;
+      font-size: 17px;
+      color: #ffffff;
+    }
+    .step-math-scroll .katex {
+      font-size: 1.05em;
+    }
+  </style>
+</head>
+<body>
+  <div id="scroller">
+    <div id="stage-wrap">
+      <div id="stage-inner"></div>
+    </div>
+  </div>
+  <div id="doc-root"></div>
+
+  <script>
+    (function () {
+      var mode = "formula";
+      var lastFormula = null;
+      var lastDocPayload = null;
+      var lastObservedWidth = 0;
+
+      function notifyMetrics(heightCssPx, overflows) {
+        if (window.AndroidMathBridge && typeof window.AndroidMathBridge.onMetrics === "function") {
+          try {
+            window.AndroidMathBridge.onMetrics(Math.max(1, Math.ceil(heightCssPx)), !!overflows);
+          } catch (_) {}
+        }
+      }
+
+      function fitBox(scrollerEl, wrapEl, innerEl, minScale, centerWhenFits, resetScroll) {
+        if (scrollerEl.clientWidth < 16) return null;
+
+        innerEl.style.transform = "scale(1)";
+        wrapEl.style.width = "auto";
+        wrapEl.style.height = "auto";
+        wrapEl.style.marginLeft = "0";
+        wrapEl.style.marginRight = "0";
+
+        var availW = Math.max(80, scrollerEl.clientWidth - 4);
+        var natW = Math.max(1, innerEl.scrollWidth);
+        var natH = Math.max(1, innerEl.scrollHeight);
+
+        var scale = 1.0;
+        if (natW > availW) {
+          scale = Math.max(minScale, availW / natW);
+        }
+
+        var scaledW = Math.ceil(natW * scale);
+        var scaledH = Math.ceil(natH * scale);
+
+        innerEl.style.transform = "scale(" + scale + ")";
+        wrapEl.style.width = scaledW + "px";
+        wrapEl.style.height = scaledH + "px";
+
+        var overflows = scaledW > (scrollerEl.clientWidth + 2);
+        if (!overflows && centerWhenFits) {
+          wrapEl.style.marginLeft = "auto";
+          wrapEl.style.marginRight = "auto";
+        } else {
+          wrapEl.style.marginLeft = "0px";
+          wrapEl.style.marginRight = "0px";
+          if (resetScroll) {
+            scrollerEl.scrollLeft = 0;
+          }
+        }
+        return { height: scaledH, overflows: overflows };
+      }
+
+      function relayoutFormula(resetScroll) {
+        if (!lastFormula) return;
+        var scroller = document.getElementById("scroller");
+        var wrap = document.getElementById("stage-wrap");
+        var inner = document.getElementById("stage-inner");
+        var res = fitBox(scroller, wrap, inner, lastFormula.minScale, lastFormula.centerWhenFits, resetScroll);
+        if (res) notifyMetrics(res.height, res.overflows);
+      }
+
+      window.renderFormula = function (latex, displayMode, fontPx, minScale, centerWhenFits) {
+        mode = "formula";
+        document.getElementById("doc-root").style.display = "none";
+        document.getElementById("scroller").style.display = "block";
+
+        var inner = document.getElementById("stage-inner");
+        inner.style.fontSize = (fontPx || 20) + "px";
+        lastFormula = {
+          latex: latex || "",
+          displayMode: displayMode !== false,
+          fontPx: fontPx || 20,
+          minScale: (typeof minScale === "number") ? minScale : 0.72,
+          centerWhenFits: centerWhenFits !== false
+        };
+
+        if (window.katex) {
+          try {
+            window.katex.render(lastFormula.latex, inner, {
+              displayMode: lastFormula.displayMode,
+              throwOnError: false
+            });
+          } catch (_) {
+            inner.textContent = lastFormula.latex;
+          }
+        } else {
+          inner.textContent = lastFormula.latex;
+        }
+
+        requestAnimationFrame(function () {
+          relayoutFormula(true);
+          setTimeout(function () { relayoutFormula(false); }, 60);
+        });
+      };
+
+      function renderMixedProse(el, text) {
+        el.textContent = text || "";
+        if (window.renderMathInElement) {
+          try {
+            window.renderMathInElement(el, {
+              delimiters: [
+                { left: "$$", right: "$$", display: true },
+                { left: "$", right: "$", display: false }
+              ],
+              throwOnError: false
+            });
+          } catch (_) {}
+        }
+      }
+
+      function relayoutDoc() {
+        var root = document.getElementById("doc-root");
+        var boxes = root.querySelectorAll(".step-math-scroll");
+        for (var i = 0; i < boxes.length; i++) {
+          var sc = boxes[i];
+          var wr = sc.querySelector(".step-math-wrap");
+          var inn = sc.querySelector(".step-math-inner");
+          if (wr && inn) {
+            fitBox(sc, wr, inn, 0.72, true, true);
+          }
+        }
+        notifyMetrics(root.scrollHeight + 4, false);
+      }
+
+      window.renderStepsDocument = function (payload) {
+        mode = "doc";
+        lastDocPayload = payload;
+        document.getElementById("scroller").style.display = "none";
+        var root = document.getElementById("doc-root");
+        root.style.display = "block";
+        root.innerHTML = "";
+
+        var lang = (payload && payload.lang === "fr") ? "fr" : "ar";
+        root.dir = (lang === "ar") ? "rtl" : "ltr";
+
+        var hints = (payload && Array.isArray(payload.hints)) ? payload.hints : [];
+        if (hints.length > 0) {
+          var hTitle = document.createElement("div");
+          hTitle.className = "doc-section-title";
+          hTitle.textContent = (lang === "ar") ? "التلميحات المفتوحة" : "Indices débloqués";
+          root.appendChild(hTitle);
+
+          for (var i = 0; i < hints.length; i++) {
+            var hc = document.createElement("div");
+            hc.className = "hint-card";
+            var hText = (hints[i] && hints[i][lang]) ? hints[i][lang] : "";
+            renderMixedProse(hc, (i + 1) + ". " + hText);
+            root.appendChild(hc);
+          }
+        }
+
+        var steps = (payload && Array.isArray(payload.steps)) ? payload.steps : [];
+        for (var j = 0; j < steps.length; j++) {
+          var st = steps[j];
+          var card = document.createElement("div");
+          card.className = "step-card";
+
+          var titleEl = document.createElement("div");
+          titleEl.className = "step-title";
+          var titleStr = (st.title && st.title[lang]) ? st.title[lang] : "";
+          titleEl.textContent = (j + 1) + ". " + titleStr;
+          card.appendChild(titleEl);
+
+          var explEl = document.createElement("div");
+          explEl.className = "step-expl";
+          var explStr = (st.explanation && st.explanation[lang]) ? st.explanation[lang] : "";
+          renderMixedProse(explEl, explStr);
+          card.appendChild(explEl);
+
+          if (st.latex) {
+            var mathScroll = document.createElement("div");
+            mathScroll.className = "step-math-scroll";
+            var mathWrap = document.createElement("div");
+            mathWrap.className = "step-math-wrap";
+            var mathInner = document.createElement("div");
+            mathInner.className = "step-math-inner";
+            if (window.katex) {
+              try {
+                window.katex.render(st.latex, mathInner, { displayMode: true, throwOnError: false });
+              } catch (_) {
+                mathInner.textContent = st.latex;
+              }
+            } else {
+              mathInner.textContent = st.latex;
+            }
+            mathWrap.appendChild(mathInner);
+            mathScroll.appendChild(mathWrap);
+            card.appendChild(mathScroll);
+          }
+          root.appendChild(card);
+        }
+
+        requestAnimationFrame(function () {
+          relayoutDoc();
+          setTimeout(relayoutDoc, 80);
+        });
+      };
+
+      function onContainerChange() {
+        var w = document.documentElement.clientWidth;
+        if (w <= 0) return;
+        lastObservedWidth = w;
+        if (mode === "formula") relayoutFormula(false);
+        else relayoutDoc();
+      }
+
+      window.addEventListener("resize", onContainerChange);
+
+      if (typeof ResizeObserver === "function") {
+        var ro = new ResizeObserver(function () {
+          var w = document.documentElement.clientWidth;
+          if (w !== lastObservedWidth && w > 0) {
+            onContainerChange();
+          }
+        });
+        ro.observe(document.documentElement);
+      }
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(function () {
+          if (mode === "formula") relayoutFormula(false);
+          else relayoutDoc();
+        });
+      }
+    })();
+  </script>
+</body>
+</html>

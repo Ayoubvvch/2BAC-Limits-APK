@@ -86,13 +86,13 @@ jobs:
           tag_name: ${{ steps.prepare_apk.outputs.tag_name }}
           name: "2BAC Limits v${{ steps.prepare_apk.outputs.version }}"
           body: |
-            ### 2BAC Limits — Native Android Release (v${{ steps.prepare_apk.outputs.version }})
+            ### 2BAC Limits — 100% Native Android Release (v${{ steps.prepare_apk.outputs.version }})
 
-            - **100% Content & Design Fidelity**: Preserves the original `index.html`, `styles.css`, and `app.js` byte-for-byte in OLED Black Mode (`#000000`).
-            - **Online-First Backend Sync + Offline CAS Engine**: Connects to the live FastAPI + SymPy backend (`http://51.170.138.59`) when online so existing usernames restore stats, mastery, history, and active exercises immediately, with seamless offline fallback to the deterministic Kotlin CAS engine across all 6 techniques (`poly_factor`, `sqrt_conjugate`, `nth_root`, `add_sub_zero`, `trig`, `hybrid`) and bundled offline KaTeX 0.16.11.
-            - **Live Sync Status & Offline Cache (`StudentDatabase` + `ProgressSyncManager`)**: Accurate connectivity & `/api/health` reachability detection, tappable sync diagnostics/server URL dialog, SQLite v2 server cache, and queued event replay.
-            - **Persistent V1+V2+V3+V4 Signing**: Signed with `app/keystore/release.jks` for seamless in-place OTA upgrades without uninstalling.
-            - **Integrated In-App Updater**: Live download progress bar with `FileProvider` package installation and optional private-repo token support.
+            - **100% Native Jetpack Compose + Material 3 Mobile UI (OLED Black `#000000`)**: Built natively for Android phones & landscape screens with 4 Bottom Navigation tabs (**Practice / التمرين**, **Progress / التقدم**, **History / السجل**, **Settings / الإعدادات**), bilingual Arabic (RTL) / French BIOF (LTR) switching, tactile custom Math Keypad with live KaTeX preview, and native BottomSheets/Dialogs.
+            - **Zero-Clip Adaptive KaTeX 0.16.11 Math Stage**: Automatically scales long limits proportionally down to legible sizes, anchors horizontal panning cleanly from the left edge, and provides a one-tap **Fullscreen Zoom Dialog (0.75×–2.20×)** so long limits never get clipped on narrow phone screens.
+            - **Online-First Backend Sync + Offline CAS Engine**: Connects to the live FastAPI + SymPy backend (`http://51.170.138.59`) when online so accounts restore stats, mastery, history, and active exercises immediately, with seamless offline fallback to the deterministic Kotlin CAS engine across all 6 techniques (`poly_factor`, `sqrt_conjugate`, `nth_root`, `add_sub_zero`, `trig`, `hybrid`).
+            - **Persistent V1+V2+V3+V4 Signing**: Signed with `app/keystore/release.jks` (`bac_limits_v1.db` + native session migration) for seamless in-place upgrades without data loss.
+            - **Integrated In-App Updater (OTA)**: Live download progress with `FileProvider` package installation and optional private-repo token support.
           files: ${{ steps.prepare_apk.outputs.apk_path }}
           draft: false
           prerelease: false

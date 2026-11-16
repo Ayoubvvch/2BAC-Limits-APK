@@ -2,5 +2,4 @@
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
--keep class com.ayoub.baclimits.MainActivity$AndroidApiBridge { *; }
--keep class com.ayoub.baclimits.MainActivity$AndroidUpdaterBridge { *; }
+-keep class com.ayoub.baclimits.ui.components.AndroidMathBridge { *; }
