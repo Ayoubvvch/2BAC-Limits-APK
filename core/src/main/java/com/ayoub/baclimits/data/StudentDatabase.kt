@@ -308,6 +308,8 @@ class StudentDatabase(context: Context) :
         if (c.moveToFirst() && c.getString(0) == seed) {
             val cv = ContentValues().apply {
                 put("active_solution_shown", 1)
+                putNull("active_seed")
+                putNull("remote_resume_json")
                 put("updated_at", System.currentTimeMillis())
             }
             db.update("students", cv, "username = ?", arrayOf(key))
@@ -370,7 +372,11 @@ class StudentDatabase(context: Context) :
                 put("current_streak", streak)
                 put("active_student_answer", rawAnswer)
                 put("active_last_grade_json", gradeJson.toString())
-                if (isCorrect) put("active_solution_shown", 1)
+                if (isCorrect) {
+                    put("active_solution_shown", 1)
+                    putNull("active_seed")
+                    putNull("remote_resume_json")
+                }
                 put("dirty_offline", 1)
                 put("updated_at", now)
             }
@@ -591,19 +597,20 @@ class StudentDatabase(context: Context) :
         val db = writableDatabase
         val hasExercise = rawResumeJson.optBoolean("has_exercise", false)
         val exObj = if (hasExercise) rawResumeJson.optJSONObject("exercise") else null
+        val hintsArr = rawResumeJson.optJSONArray("hints")
+        val solObj = rawResumeJson.optJSONObject("solution")
+        val gradeObj = rawResumeJson.optJSONObject("last_grade")
+        val isCompleted = solObj != null || gradeObj?.optBoolean("is_correct", false) == true
 
         val cv = ContentValues().apply {
             put("remote_resume_json", rawResumeJson.toString())
             put("updated_at", now)
-            if (exObj != null) {
+            if (exObj != null && !isCompleted) {
                 val seed = exObj.optString("seed", "")
                 val tech = exObj.optString("technique", inferTechniqueFromSeed(seed))
                 val diff = exObj.optInt("difficulty", inferDifficultyFromSeed(seed))
                 val latex = exObj.optString("full_limit_latex", "")
                 val totalHints = exObj.optInt("total_hints", 0)
-                val hintsArr = rawResumeJson.optJSONArray("hints")
-                val solObj = rawResumeJson.optJSONObject("solution")
-                val gradeObj = rawResumeJson.optJSONObject("last_grade")
                 val stuAns = rawResumeJson.optString("student_answer", "")
 
                 put("active_seed", seed)
@@ -612,7 +619,7 @@ class StudentDatabase(context: Context) :
                 put("active_latex", latex)
                 put("active_total_hints", totalHints)
                 put("active_hints_count", hintsArr?.length() ?: 0)
-                put("active_solution_shown", if (solObj != null) 1 else 0)
+                put("active_solution_shown", 0)
                 if (gradeObj != null) put("active_last_grade_json", gradeObj.toString()) else putNull("active_last_grade_json")
                 put("active_student_answer", stuAns)
 
@@ -824,11 +831,16 @@ class StudentDatabase(context: Context) :
         val now = System.currentTimeMillis()
         val sc = db.rawQuery("SELECT active_seed, remote_resume_json FROM students WHERE username = ?", arrayOf(key))
         if (sc.moveToFirst() && sc.getString(0) == seed) {
+            val isCompleted = solObj != null || gradeObj?.optBoolean("is_correct", false) == true
             val resumeRaw = sc.getString(1)
             val cv = ContentValues().apply {
                 put("active_student_answer", answer)
                 if (gradeObj != null) put("active_last_grade_json", gradeObj.toString())
-                if (solObj != null) put("active_solution_shown", 1)
+                if (solObj != null || isCompleted) put("active_solution_shown", 1)
+                if (isCompleted) {
+                    putNull("active_seed")
+                    putNull("remote_resume_json")
+                }
                 put("updated_at", now)
                 if (!resumeRaw.isNullOrBlank()) {
                     try {
@@ -1026,13 +1038,24 @@ class StudentDatabase(context: Context) :
         val remoteResumeStr = c.getString(5)
         c.close()
 
-        if (seed.isNullOrBlank()) {
+        if (seed.isNullOrBlank() || solShown) {
             return JSONObject().put("has_exercise", false)
         }
 
-        if (LimitsCasEngine.isValidSeed(seed)) {
+        if (!gradeStr.isNullOrBlank()) {
+            try {
+                val g = JSONObject(gradeStr)
+                if (g.optBoolean("is_correct", false)) {
+                    return JSONObject().put("has_exercise", false)
+                }
+            } catch (_: Exception) {
+            }
+        }
+
+        val engine = OfflineLimitsEngineHolder.get()
+        if (engine.isValidSeed(seed)) {
             return try {
-                val ex = LimitsCasEngine.generate("adaptive", 0, explicitSeed = seed)
+                val ex = engine.generate("adaptive", 0, explicitSeed = seed)
                 val hintsArr = JSONArray()
                 for (i in 0 until minOf(hintsCount, ex.hints.size)) {
                     hintsArr.put(

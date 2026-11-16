@@ -20,7 +20,8 @@ data class GeneratedExercise(
     val hints: List<LocalizedText>,
     val answerLatex: String,
     val expectedAnswer: ExpectedAnswer,
-    val steps: List<SolutionStep>
+    val steps: List<SolutionStep>,
+    val answerSympyStr: String? = null
 )
 
 private class SplitMix64(seed: Long) {

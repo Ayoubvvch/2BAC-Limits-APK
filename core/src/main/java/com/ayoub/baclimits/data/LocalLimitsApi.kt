@@ -312,7 +312,8 @@ class LocalLimitsApi(
             val evalResult = engine.evaluateAnswer(
                 expectedAnswer = ex.expectedAnswer,
                 studentAnswer = rawAnswer,
-                expectedLatex = ex.answerLatex
+                expectedLatex = ex.answerLatex,
+                expectedSympyStr = ex.answerSympyStr
             )
 
             val gradeObj = JSONObject()

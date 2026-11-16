@@ -6,15 +6,18 @@ import com.ayoub.baclimits.data.EvaluationResult
 import com.ayoub.baclimits.data.OfflineLimitsEngine
 import com.ayoub.baclimits.math.ExpectedAnswer
 import com.ayoub.baclimits.math.GeneratedExercise
-import com.ayoub.baclimits.math.LimitsCasEngine
 import com.ayoub.baclimits.math.LocalizedText
-import com.ayoub.baclimits.math.MathExprEvaluator
 import com.ayoub.baclimits.math.SolutionStep
 import com.chaquo.python.Python
 import com.chaquo.python.android.AndroidPlatform
 import org.json.JSONObject
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * 2BAC Limits — Full Edition Engine.
+ * 100% powered by embedded Python 3.11 + SymPy procedural CAS.
+ * Strictly relies on the procedural Python CAS library with zero Kotlin CAS dependencies.
+ */
 class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine {
 
     companion object {
@@ -64,57 +67,50 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
         suggestedDifficulty: Int,
         masteryJson: String?
     ): GeneratedExercise {
-        if (ensurePythonInitialized()) {
-            try {
-                val py = Python.getInstance()
-                val bridge = py.getModule("engine_bridge")
-                val resStr = bridge.callAttr(
-                    "generate_exercise_json",
-                    requestedTechnique,
-                    requestedDifficulty,
-                    explicitSeed,
-                    masteryJson
-                ).toString()
-
-                val resJson = JSONObject(resStr)
-                if (resJson.optString("status") == "ok") {
-                    val exJson = resJson.getJSONObject("exercise")
-                    val seed = exJson.getString("seed")
-                    val sympyStr = exJson.optString("answer_sympy_str", "")
-                    if (sympyStr.isNotBlank()) {
-                        synchronized(sympyStrCache) {
-                            sympyStrCache[seed] = sympyStr
-                        }
-                    }
-
-                    return parseExerciseFromJson(exJson)
-                } else {
-                    Log.w(TAG, "Python engine error: ${resJson.optString("error")}")
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception during Python exercise generation: ${e.message}", e)
-            }
+        if (!ensurePythonInitialized()) {
+            throw IllegalStateException("Chaquopy Python engine failed to initialize: $initError")
         }
 
-        // Safe fallback to local Kotlin CAS engine if Python encounters an edge case
-        return LimitsCasEngine.generate(
-            requestedTechnique = requestedTechnique,
-            requestedDifficulty = requestedDifficulty,
-            explicitSeed = explicitSeed,
-            weakestTechnique = weakestTechnique ?: "adaptive",
-            suggestedDifficulty = suggestedDifficulty
-        )
+        val py = Python.getInstance()
+        val bridge = py.getModule("engine_bridge")
+        val resStr = bridge.callAttr(
+            "generate_exercise_json",
+            requestedTechnique,
+            requestedDifficulty,
+            explicitSeed,
+            masteryJson
+        ).toString()
+
+        val resJson = JSONObject(resStr)
+        if (resJson.optString("status") == "ok") {
+            val exJson = resJson.getJSONObject("exercise")
+            val seed = exJson.getString("seed")
+            val sympyStr = exJson.optString("answer_sympy_str", "")
+            if (sympyStr.isNotBlank()) {
+                synchronized(sympyStrCache) {
+                    sympyStrCache[seed] = sympyStr
+                }
+            }
+
+            return parseExerciseFromJson(exJson)
+        } else {
+            val err = resJson.optString("error", "Unknown Python engine error")
+            val tb = resJson.optString("traceback", "")
+            Log.e(TAG, "Python CAS engine error: $err\n$tb")
+            throw IllegalStateException("Python CAS engine error: $err")
+        }
     }
 
     override fun isValidSeed(seed: String): Boolean {
-        if (ensurePythonInitialized()) {
-            try {
-                val py = Python.getInstance()
-                val bridge = py.getModule("engine_bridge")
-                return bridge.callAttr("is_valid_seed", seed).toBoolean()
-            } catch (_: Exception) {}
+        if (!ensurePythonInitialized()) return false
+        return try {
+            val py = Python.getInstance()
+            val bridge = py.getModule("engine_bridge")
+            bridge.callAttr("is_valid_seed", seed).toBoolean()
+        } catch (e: Exception) {
+            Log.e(TAG, "isValidSeed error: ${e.message}", e)
+            false
         }
-        return LimitsCasEngine.isValidSeed(seed)
     }
 
     override fun evaluateAnswer(
@@ -123,7 +119,16 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
         expectedLatex: String?,
         expectedSympyStr: String?
     ): EvaluationResult {
-        val targetSympy = expectedSympyStr ?: run {
+        if (!ensurePythonInitialized()) {
+            return EvaluationResult(
+                isCorrect = false,
+                messageAr = "محرك بايثون غير مهيأ بعد: $initError",
+                messageFr = "Le moteur Python n'est pas encore initialisé : $initError",
+                validSyntax = false
+            )
+        }
+
+        val targetSympy = expectedSympyStr?.takeIf { it.isNotBlank() } ?: run {
             when (expectedAnswer) {
                 is ExpectedAnswer.PosInf -> "oo"
                 is ExpectedAnswer.NegInf -> "-oo"
@@ -131,47 +136,43 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
             }
         }
 
-        if (ensurePythonInitialized() && targetSympy.isNotBlank()) {
-            try {
-                val py = Python.getInstance()
-                val bridge = py.getModule("engine_bridge")
-                val resStr = bridge.callAttr("grade_answer_json", studentAnswer, targetSympy).toString()
-                val resJson = JSONObject(resStr)
-                if (resJson.optString("status") == "ok") {
-                    val grade = resJson.getJSONObject("grade")
-                    val isCorrect = grade.optBoolean("is_correct", false)
-                    val msgObj = grade.optJSONObject("message")
-                    val msgAr = msgObj?.optString("ar") ?: if (isCorrect) "أحسنت! إجابة صحيحة تماماً." else "إجابة غير صحيحة."
-                    val msgFr = msgObj?.optString("fr") ?: if (isCorrect) "Bravo ! Votre réponse est exacte." else "Réponse incorrecte."
-                    val validSyntax = grade.optBoolean("valid_syntax", true)
+        return try {
+            val py = Python.getInstance()
+            val bridge = py.getModule("engine_bridge")
+            val resStr = bridge.callAttr("grade_answer_json", studentAnswer, targetSympy).toString()
+            val resJson = JSONObject(resStr)
+            if (resJson.optString("status") == "ok") {
+                val grade = resJson.getJSONObject("grade")
+                val isCorrect = grade.optBoolean("is_correct", false)
+                val msgObj = grade.optJSONObject("message")
+                val msgAr = msgObj?.optString("ar") ?: if (isCorrect) "أحسنت! إجابة صحيحة تماماً." else "إجابة غير صحيحة."
+                val msgFr = msgObj?.optString("fr") ?: if (isCorrect) "Bravo ! Votre réponse est exacte." else "Réponse incorrecte."
+                val validSyntax = grade.optBoolean("valid_syntax", true)
 
-                    return EvaluationResult(
-                        isCorrect = isCorrect,
-                        messageAr = msgAr,
-                        messageFr = msgFr,
-                        validSyntax = validSyntax
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Exception during Python grading: ${e.message}", e)
+                EvaluationResult(
+                    isCorrect = isCorrect,
+                    messageAr = msgAr,
+                    messageFr = msgFr,
+                    validSyntax = validSyntax
+                )
+            } else {
+                val err = resJson.optString("error", "Erreur d'évaluation")
+                EvaluationResult(
+                    isCorrect = false,
+                    messageAr = "خطأ في تقييم الإجابة عبر بايثون: $err",
+                    messageFr = "Erreur lors de l'évaluation Python : $err",
+                    validSyntax = false
+                )
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Exception during Python grading: ${e.message}", e)
+            EvaluationResult(
+                isCorrect = false,
+                messageAr = "تعذر تقييم الإجابة عبر بايثون: ${e.message}",
+                messageFr = "Impossible d'évaluer la réponse via Python : ${e.message}",
+                validSyntax = false
+            )
         }
-
-        // Fallback to Kotlin evaluator
-        val eval = MathExprEvaluator.evaluate(studentAnswer)
-        val isCorrect = MathExprEvaluator.isEquivalent(expectedAnswer, studentAnswer)
-        val (msgAr, msgFr) = when {
-            isCorrect -> "أحسنت! إجابة صحيحة ومتطابقة رمزياً." to "Bravo ! Réponse exacte et symboliquement équivalente."
-            eval is com.ayoub.baclimits.math.EvalResult.Invalid ->
-                "تعذر فهم الصيغة الرياضية (${eval.reason}). جرب: 1/2 أو sqrt(2)/2 أو +inf" to "Expression invalide (${eval.reason})."
-            else -> "إجابة غير صحيحة. راجع الإشارة والمعاملات ثم أعد المحاولة!" to "Réponse incorrecte."
-        }
-        return EvaluationResult(
-            isCorrect = isCorrect,
-            messageAr = msgAr,
-            messageFr = msgFr,
-            validSyntax = eval !is com.ayoub.baclimits.math.EvalResult.Invalid
-        )
     }
 
     private fun parseExerciseFromJson(json: JSONObject): GeneratedExercise {
@@ -217,7 +218,6 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
                 if (doubleVal != null) {
                     ExpectedAnswer.Finite(doubleVal)
                 } else {
-                    // Try parsing simple fractions like "3/2"
                     val parts = answerSympyStr.split("/")
                     if (parts.size == 2) {
                         val num = parts[0].trim().toDoubleOrNull()
@@ -242,7 +242,8 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
             hints = hints,
             answerLatex = answerLatex,
             expectedAnswer = expectedAnswer,
-            steps = steps
+            steps = steps,
+            answerSympyStr = answerSympyStr
         )
     }
 }

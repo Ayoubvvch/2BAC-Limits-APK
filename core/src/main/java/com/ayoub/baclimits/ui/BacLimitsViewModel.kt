@@ -260,8 +260,12 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
                 repo.saveSession(activeUser, lang)
                 val recent = repo.getRecentUsernames()
 
-                val resumeRes = repo.resume(activeUser).getOrNull()
-                if (resumeRes != null && resumeRes.hasExercise && resumeRes.exercise != null) {
+                val resumeRes = if (isAutoResume) null else repo.resume(activeUser).getOrNull()
+                val isCompleted = resumeRes == null || !resumeRes.hasExercise || resumeRes.exercise == null ||
+                        resumeRes.lastGrade?.isCorrect == true || resumeRes.solution != null
+                val shouldResume = !isAutoResume && !isCompleted
+
+                if (shouldResume && resumeRes != null && resumeRes.exercise != null) {
                     val ans = resumeRes.studentAnswer
                     val preview = LatexFormatter.asciiToPreviewLatex(ans)
                     mainHandler.post {
@@ -520,7 +524,9 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
                 mainHandler.post {
                     _uiState.update { state ->
                         val nextStats = statsRes.getOrNull() ?: state.stats
-                        if (resumeRes != null && resumeRes.hasExercise && resumeRes.exercise != null) {
+                        val isCompleted = resumeRes == null || !resumeRes.hasExercise || resumeRes.exercise == null ||
+                                resumeRes.lastGrade?.isCorrect == true || resumeRes.solution != null
+                        if (!isCompleted && state.exercise == null && resumeRes != null && resumeRes.exercise != null) {
                             val ans = resumeRes.studentAnswer
                             state.copy(
                                 isSyncingAccount = false,
