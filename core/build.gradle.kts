@@ -11,6 +11,10 @@ android {
         minSdk = 24
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles("consumer-rules.pro")
+
+        val propVersionName = (project.findProperty("versionName") as String?)
+            ?.takeIf { it.isNotBlank() } ?: "1.1.0"
+        buildConfigField("String", "VERSION_NAME", "\"$propVersionName\"")
     }
 
     compileOptions {

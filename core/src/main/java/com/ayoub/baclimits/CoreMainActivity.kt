@@ -110,7 +110,7 @@ open class CoreMainActivity : ComponentActivity() {
                         viewModel.consumePendingInstallRequest()
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                             Toast.makeText(
-                                this@MainActivity,
+                                this@CoreMainActivity,
                                 "Allow 2BAC Limits to install app updates",
                                 Toast.LENGTH_LONG
                             ).show()

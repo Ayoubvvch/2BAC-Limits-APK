@@ -21,8 +21,8 @@ interface OfflineLimitsEngine {
         requestedTechnique: String,
         requestedDifficulty: Int,
         explicitSeed: String?,
-        weakestTechnique: String?,
-        suggestedDifficulty: Int,
+        weakestTechnique: String? = null,
+        suggestedDifficulty: Int = 1,
         masteryJson: String? = null
     ): GeneratedExercise
 
@@ -53,7 +53,7 @@ object LiteKotlinLimitsEngine : OfflineLimitsEngine {
             requestedTechnique = requestedTechnique,
             requestedDifficulty = requestedDifficulty,
             explicitSeed = explicitSeed,
-            weakestTechnique = weakestTechnique,
+            weakestTechnique = weakestTechnique ?: "adaptive",
             suggestedDifficulty = suggestedDifficulty
         )
     }

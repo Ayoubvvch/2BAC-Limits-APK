@@ -99,7 +99,7 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
             requestedTechnique = requestedTechnique,
             requestedDifficulty = requestedDifficulty,
             explicitSeed = explicitSeed,
-            weakestTechnique = weakestTechnique,
+            weakestTechnique = weakestTechnique ?: "adaptive",
             suggestedDifficulty = suggestedDifficulty
         )
     }
