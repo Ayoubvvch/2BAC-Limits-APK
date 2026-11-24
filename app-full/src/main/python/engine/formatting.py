@@ -7,6 +7,7 @@ import sympy as sp
 from .models import LimitPoint
 
 X = sp.Symbol("x", real=True)
+N = sp.Symbol("n", integer=True, positive=True)
 
 
 class RootN(sp.Function):
@@ -119,12 +120,13 @@ def value_latex(val: sp.Expr | int) -> str:
         return r"+\infty"
     if expr == -sp.oo:
         return r"-\infty"
-    return sp.latex(sp.simplify(expr))
+    tex = sp.latex(sp.simplify(expr), ln_notation=True)
+    return tex
 
 
 def expr_latex(expr: sp.Expr) -> str:
     """Format a general SymPy expression containing RootN cleanly."""
-    return sp.latex(expr)
+    return sp.latex(expr, ln_notation=True)
 
 
 def limit_statement_latex(expr_tex: str, point: LimitPoint) -> str:

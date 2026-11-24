@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -341,6 +342,83 @@ fun KaTeXStepsView(
         modifier = modifier
             .fillMaxWidth()
             .height(measuredHeightDp.dp)
+    )
+}
+
+@Composable
+fun KaTeXProseView(
+    text: String,
+    lang: String,
+    modifier: Modifier = Modifier,
+    fontPx: Float = 14f,
+    colorHex: String = "#e2e8f0",
+    fallbackColor: Color = OledColors.TextPrimary,
+    minHeightDp: Int = 22
+) {
+    if (!text.contains("$")) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = fontPx.sp),
+            color = fallbackColor,
+            modifier = modifier
+        )
+        return
+    }
+
+    val context = LocalContext.current
+    var measuredHeightDp by remember { mutableIntStateOf(minHeightDp) }
+    var pageReady by remember { mutableStateOf(false) }
+    var webViewRef by remember { mutableStateOf<MathCanvasWebView?>(null) }
+
+    val latestText by rememberUpdatedState(text)
+    val latestDir by rememberUpdatedState(if (lang == "fr") "ltr" else "rtl")
+    val latestFontPx by rememberUpdatedState(fontPx)
+    val latestColor by rememberUpdatedState(colorHex)
+
+    fun pushProse(wv: WebView) {
+        val qText = JSONObject.quote(latestText)
+        val qDir = JSONObject.quote(latestDir)
+        val qColor = JSONObject.quote(latestColor)
+        wv.evaluateJavascript("window.renderProse($qText, $qDir, $latestFontPx, $qColor);", null)
+    }
+
+    val bridge = remember {
+        AndroidMathBridge { heightCssPx, _ ->
+            val clampedH = heightCssPx.coerceIn(minHeightDp, 900)
+            webViewRef?.post {
+                measuredHeightDp = clampedH
+            }
+        }
+    }
+
+    val webView = remember {
+        createConfiguredMathWebView(context, bridge) { wv ->
+            pageReady = true
+            pushProse(wv)
+        }.also {
+            it.allowHorizontalPan = false
+            webViewRef = it
+        }
+    }
+
+    LaunchedEffect(pageReady, text, lang, fontPx, colorHex) {
+        if (pageReady) {
+            pushProse(webView)
+        }
+    }
+
+    DisposableEffect(webView) {
+        onDispose {
+            webView.stopLoading()
+            webView.destroy()
+        }
+    }
+
+    AndroidView(
+        factory = { webView },
+        modifier = modifier
+            .fillMaxWidth()
+            .height(measuredHeightDp.coerceAtLeast(minHeightDp).dp)
     )
 }
 

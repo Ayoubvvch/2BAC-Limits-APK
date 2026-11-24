@@ -1,12 +1,11 @@
 package com.ayoub.baclimits.math
 
-import kotlin.math.PI
 import kotlin.math.E
+import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.ln
-import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.roundToLong
 import kotlin.math.sin
@@ -28,6 +27,8 @@ sealed class EvalResult {
 
 object MathExprEvaluator {
 
+    private val EXPR_N_PROBES = doubleArrayOf(1.0, 2.0, 3.0, 5.0, 8.0, 13.0)
+
     fun isEquivalent(expected: ExpectedAnswer, rawInput: String): Boolean {
         return when (val parsed = evaluate(rawInput)) {
             is EvalResult.PosInf -> expected is ExpectedAnswer.PosInf
@@ -41,28 +42,54 @@ object MathExprEvaluator {
         }
     }
 
-    fun evaluate(rawInput: String): EvalResult {
+    fun isEquivalentExprN(expectedExpr: String, rawInput: String): Boolean {
+        if (expectedExpr.isBlank() || rawInput.isBlank()) return false
+        for (k in EXPR_N_PROBES) {
+            val expRes = evaluate(expectedExpr, nValue = k)
+            val stuRes = evaluate(rawInput, nValue = k)
+            if (expRes !is EvalResult.Finite || stuRes !is EvalResult.Finite) {
+                return false
+            }
+            val tol = 1e-6 * maxOf(1.0, abs(expRes.value))
+            if (abs(stuRes.value - expRes.value) > tol) {
+                return false
+            }
+        }
+        return true
+    }
+
+    fun validateSyntax(rawInput: String, answerKind: String = "constant"): EvalResult {
+        return if (answerKind == "expression_n") {
+            evaluate(rawInput, nValue = 2.0)
+        } else {
+            evaluate(rawInput, nValue = null)
+        }
+    }
+
+    fun evaluate(rawInput: String, nValue: Double? = null): EvalResult {
         val trimmed = rawInput.trim()
         if (trimmed.isEmpty()) return EvalResult.Invalid("Empty input")
 
-        val normalizedInf = trimmed
-            .lowercase()
-            .replace("\\s+".toRegex(), "")
-            .replace("−", "-")
-            .replace("–", "-")
+        if (nValue == null) {
+            val normalizedInf = trimmed
+                .lowercase()
+                .replace("\\s+".toRegex(), "")
+                .replace("−", "-")
+                .replace("–", "-")
 
-        when (normalizedInf) {
-            "+inf", "inf", "+oo", "oo", "+infinity", "infinity", "+∞", "∞", "+\\infty", "\\infty" ->
-                return EvalResult.PosInf
-            "-inf", "-oo", "-infinity", "-∞", "-\\infty" ->
-                return EvalResult.NegInf
+            when (normalizedInf) {
+                "+inf", "inf", "+oo", "oo", "+infinity", "infinity", "+∞", "∞", "+\\infty", "\\infty" ->
+                    return EvalResult.PosInf
+                "-inf", "-oo", "-infinity", "-∞", "-\\infty" ->
+                    return EvalResult.NegInf
+            }
         }
 
         return try {
             val cleaned = preprocess(trimmed)
             val tokens = tokenize(cleaned)
             if (tokens.isEmpty()) return EvalResult.Invalid("Empty expression")
-            val parser = Parser(tokens)
+            val parser = Parser(tokens, nValue)
             val value = parser.parseExpression()
             if (parser.hasMore()) {
                 return EvalResult.Invalid("Unexpected trailing token")
@@ -76,6 +103,22 @@ object MathExprEvaluator {
         }
     }
 
+    private fun extractBracedGroup(s: String, start: Int): Pair<String, Int> {
+        var depth = 0
+        var i = start
+        while (i < s.length) {
+            if (s[i] == '{') depth++
+            else if (s[i] == '}') {
+                depth--
+                if (depth == 0) {
+                    return s.substring(start + 1, i) to (i + 1)
+                }
+            }
+            i++
+        }
+        throw IllegalArgumentException("Unmatched '{'")
+    }
+
     private fun preprocess(input: String): String {
         var s = input.trim()
             .replace("−", "-")
@@ -83,17 +126,67 @@ object MathExprEvaluator {
             .replace("×", "*")
             .replace("·", "*")
             .replace("÷", "/")
+            .replace("\\left", "")
+            .replace("\\right", "")
+            .replace("\\cdot", "*")
+            .replace("\\times", "*")
+            .replace("\\div", "/")
             .replace("**", "^")
             .replace("π", "pi")
             .replace("\\pi", "pi")
-            .replace("\\sqrt", "sqrt")
-            .replace("\\frac", "")
             .replace("⁴√", "qdrt")
             .replace("∛", "cbrt")
 
+        s = Regex("\\\\(sin|cos|tan|ln|log|exp)\\b").replace(s) { m ->
+            if (m.groupValues[1] == "log") "ln" else m.groupValues[1]
+        }
+
+        // Convert \frac{a}{b} iteratively (supports nested braces)
+        while (s.contains("\\frac")) {
+            val idx = s.indexOf("\\frac")
+            var pos = idx + 5
+            while (pos < s.length && s[pos].isWhitespace()) pos++
+            if (pos >= s.length || s[pos] != '{') throw IllegalArgumentException("Malformed \\frac")
+            val (num, afterNum) = extractBracedGroup(s, pos)
+            pos = afterNum
+            while (pos < s.length && s[pos].isWhitespace()) pos++
+            if (pos >= s.length || s[pos] != '{') throw IllegalArgumentException("Malformed \\frac denominator")
+            val (den, afterDen) = extractBracedGroup(s, pos)
+            s = s.substring(0, idx) + "(($num)/($den))" + s.substring(afterDen)
+        }
+
+        // Convert \sqrt[n]{a} and \sqrt{a} iteratively
+        while (s.contains("\\sqrt")) {
+            val idx = s.indexOf("\\sqrt")
+            var pos = idx + 5
+            while (pos < s.length && s[pos].isWhitespace()) pos++
+            if (pos < s.length && s[pos] == '[') {
+                val endBracket = s.indexOf(']', pos)
+                if (endBracket == -1) throw IllegalArgumentException("Malformed \\sqrt[n]")
+                val degStr = s.substring(pos + 1, endBracket)
+                pos = endBracket + 1
+                while (pos < s.length && s[pos].isWhitespace()) pos++
+                if (pos >= s.length || s[pos] != '{') throw IllegalArgumentException("Malformed \\sqrt[n]{...}")
+                val (inner, afterInner) = extractBracedGroup(s, pos)
+                s = s.substring(0, idx) + "root(($inner), $degStr)" + s.substring(afterInner)
+            } else if (pos < s.length && s[pos] == '{') {
+                val (inner, afterInner) = extractBracedGroup(s, pos)
+                s = s.substring(0, idx) + "sqrt($inner)" + s.substring(afterInner)
+            } else {
+                throw IllegalArgumentException("Malformed \\sqrt")
+            }
+        }
+
+        // Convert ^{...} exponents
+        while (s.contains("^{")) {
+            val idx = s.indexOf("^{")
+            val (inner, afterInner) = extractBracedGroup(s, idx + 1)
+            s = s.substring(0, idx) + "^($inner)" + s.substring(afterInner)
+        }
+
         // Support √2 -> sqrt(2) and √(x) -> sqrt(x)
         s = Regex("√\\s*\\(").replace(s, "sqrt(")
-        s = Regex("√\\s*([0-9]+(?:\\.[0-9]+)?|pi)\\b").replace(s) { m ->
+        s = Regex("√\\s*([0-9]+(?:\\.[0-9]+)?|pi|e|n)\\b").replace(s) { m ->
             "sqrt(${m.groupValues[1]})"
         }
         s = s.replace("√", "sqrt")
@@ -177,7 +270,10 @@ object MathExprEvaluator {
         return out
     }
 
-    private class Parser(private val tokens: List<Token>) {
+    private class Parser(
+        private val tokens: List<Token>,
+        private val nValue: Double?
+    ) {
         private var pos = 0
 
         fun hasMore(): Boolean = pos < tokens.size
@@ -280,6 +376,7 @@ object MathExprEvaluator {
                         when (t.name) {
                             "pi" -> PI
                             "e" -> E
+                            "n" -> nValue ?: throw IllegalArgumentException("Variable n is not allowed here")
                             else -> throw IllegalArgumentException("Unknown identifier: ${t.name}")
                         }
                     }
@@ -342,15 +439,10 @@ object MathExprEvaluator {
                     require(args.size == 1)
                     abs(args[0])
                 }
-                "ln" -> {
+                "ln", "log" -> {
                     require(args.size == 1)
                     if (args[0] <= 0.0) throw ArithmeticException("Non-positive ln")
                     ln(args[0])
-                }
-                "log" -> {
-                    require(args.size == 1)
-                    if (args[0] <= 0.0) throw ArithmeticException("Non-positive log")
-                    log10(args[0])
                 }
                 "exp" -> {
                     require(args.size == 1)

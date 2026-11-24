@@ -114,6 +114,11 @@ def assemble_vanishing_fraction(
     full_tex = rf"\frac{{{tex_num}}}{{{tex_den}}}"
     expected = sp.simplify(slope_num / slope_den)
     lin_tex = linear_factor_latex("x", x0)
+    order = max(num.order, den.order)
+    if order == 1:
+        factor_tex = f"({lin_tex})"
+    else:
+        factor_tex = f"x^{{{order}}}" if x0 == 0 else rf"({lin_tex})^{{{order}}}"
 
     steps: list[SolutionStep] = [
         SolutionStep(
@@ -141,8 +146,8 @@ def assemble_vanishing_fraction(
         SolutionStep(
             title=BilingualText(ar="الجمع وحساب النهاية", fr="Conclusion et calcul final"),
             explanation=BilingualText(
-                ar=f"بقسمة البسط والمقام على $({lin_tex})$ (أو اختزاله مباشرة) ثم المرور للنهاية عند ${x0}$:",
-                fr=f"En divisant numérateur et dénominateur par $({lin_tex})$ puis en passant à la limite en ${x0}$ :",
+                ar=f"بقسمة البسط والمقام على ${factor_tex}$ (أو اختزاله مباشرة) ثم المرور للنهاية عند ${x0}$:",
+                fr=f"En divisant numérateur et dénominateur par ${factor_tex}$ puis en passant à la limite en ${x0}$ :",
             ),
             latex=rf"\lim_{{x \to {point.point_latex()}}} {full_tex} = \frac{{{num_calc_tex}}}{{{den_calc_tex}}} = {value_latex(expected)}",
         )
@@ -150,8 +155,8 @@ def assemble_vanishing_fraction(
 
     hints: list[BilingualText] = [
         BilingualText(
-            ar="بالتعويض المباشر نجد شكلاً غير محدد $\\frac{0}{0}$؛ يجب إظهار العامل $(" + lin_tex + ")$ في البسط والمقام للاختزال.",
-            fr="La substitution directe donne $\\frac{0}{0}$ ; il faut faire apparaître le facteur $(" + lin_tex + ")$ pour simplifier.",
+            ar=f"بالتعويض المباشر نجد شكلاً غير محدد $\\frac{{0}}{{0}}$؛ يجب إظهار العامل ${factor_tex}$ في البسط والمقام للاختزال.",
+            fr=f"La substitution directe donne $\\frac{{0}}{{0}}$ ; il faut faire apparaître le facteur ${factor_tex}$ pour simplifier.",
         )
     ]
     if num.hint_ar:

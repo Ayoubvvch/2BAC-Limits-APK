@@ -11,11 +11,15 @@ from ..bricks import (
     _nonzero_int,
     _poly_with_value_at,
     make_add_zero_brick,
+    make_exp_brick,
+    make_ln_brick,
     make_nth_conj_brick,
     make_poly_brick,
+    make_poly_order2_brick,
     make_sqrt_conj_brick,
     make_subst_root_brick,
     make_trig_brick,
+    make_trig_order2_brick,
 )
 from ..formatting import (
     RootN,
@@ -51,6 +55,10 @@ def _make_brick_by_family(rng: random.Random, family: str, x0: int) -> Vanishing
         return make_subst_root_brick(rng, x0, k=rng.choice([4, 6]))
     if family == "trig":
         return make_trig_brick(rng, x0)
+    if family == "ln":
+        return make_ln_brick(rng, x0, poly_deg=1)
+    if family == "exp":
+        return make_exp_brick(rng, x0)
     raise ValueError(f"Unknown brick family: {family}")
 
 
@@ -58,8 +66,14 @@ def _build_hybrid_pair(rng: random.Random, seed: str, difficulty: Difficulty) ->
     x0 = _nonzero_int(rng, -4, 4)
 
     if difficulty == Difficulty.BASIC:
-        # Clean pair: radical or trig brick over polynomial
-        num_fam, den_fam = rng.choice([("sqrt_conj", "poly"), ("nth_conj", "poly"), ("trig", "poly")])
+        # Clean pair: radical, trig, ln, or exp brick over polynomial
+        num_fam, den_fam = rng.choice([
+            ("sqrt_conj", "poly"),
+            ("nth_conj", "poly"),
+            ("trig", "poly"),
+            ("ln", "poly"),
+            ("exp", "poly"),
+        ])
     elif difficulty == Difficulty.INTERMEDIATE:
         pairs = [
             ("sqrt_conj", "nth_conj"),
@@ -68,10 +82,14 @@ def _build_hybrid_pair(rng: random.Random, seed: str, difficulty: Difficulty) ->
             ("subst_root", "poly"),
             ("trig", "sqrt_conj"),
             ("sqrt_conj", "trig"),
+            ("ln", "exp"),
+            ("exp", "ln"),
+            ("ln", "sqrt_conj"),
+            ("exp", "trig"),
         ]
         num_fam, den_fam = rng.choice(pairs)
     else:
-        families = ["sqrt_conj", "nth_conj", "add_zero", "subst_root", "trig"]
+        families = ["sqrt_conj", "nth_conj", "add_zero", "subst_root", "trig", "ln", "exp"]
         num_fam, den_fam = rng.sample(families, 2)
 
     num = _make_brick_by_family(rng, num_fam, x0)
@@ -192,12 +210,48 @@ def _build_reciprocal_wrapper(rng: random.Random, seed: str, difficulty: Difficu
     return ex, full_expr, expected
 
 
+def _build_order2_hybrid(
+    rng: random.Random,
+    seed: str,
+    difficulty: Difficulty,
+) -> tuple[GeneratedExercise, sp.Expr, sp.Expr]:
+    """Compose two order-2 vanishing bricks (e.g. 1 - cos(a(x-x0)) over (x-x0)^2 * Q(x))."""
+    x0 = rng.choice([-3, -2, -1, 0, 1, 2, 3])
+    trig2 = make_trig_order2_brick(rng, x0)
+    poly2 = make_poly_order2_brick(rng, x0, coeff_bound=3)
+    if rng.random() < 0.5:
+        num, den = trig2, poly2
+        sub_name = f"hybrid_order2_{trig2.sub_pattern}_over_poly2"
+    else:
+        num, den = poly2, trig2
+        sub_name = f"hybrid_order2_poly2_over_{trig2.sub_pattern}"
+
+    extra_den = maybe_nonvanishing_wrapper(rng, x0, allow_radical=True) if rng.random() < 0.4 else None
+    ex = assemble_vanishing_fraction(
+        seed=seed,
+        technique=Technique.HYBRID,
+        sub_pattern=sub_name,
+        difficulty=difficulty,
+        num=num,
+        den=den,
+        extra_den=extra_den,
+        tags=["hybrid_composer", "order_2"],
+    )
+    full_expr = num.expr / (den.expr * (extra_den[0] if extra_den else 1))
+    return ex, full_expr, sp.sympify(ex.answer_sympy_str)
+
+
 def generate_hybrid(seed: str, difficulty: Difficulty) -> GeneratedExercise:
     """Generate a verified multi-technique composite limit exercise."""
 
     def _build(rng: random.Random):
-        if difficulty == Difficulty.CHALLENGE and rng.random() < 0.35:
-            return _build_reciprocal_wrapper(rng, seed, difficulty)
+        if difficulty == Difficulty.CHALLENGE:
+            r = rng.random()
+            if r < 0.25:
+                return _build_order2_hybrid(rng, seed, difficulty)
+            if r < 0.55:
+                return _build_reciprocal_wrapper(rng, seed, difficulty)
+            return _build_hybrid_pair(rng, seed, difficulty)
         if difficulty == Difficulty.INTERMEDIATE and rng.random() < 0.25:
             return _build_reciprocal_wrapper(rng, seed, difficulty)
         return _build_hybrid_pair(rng, seed, difficulty)

@@ -1,21 +1,64 @@
-"""2BAC PC Moroccan Limits Procedural Exercise Engine."""
+"""2BAC PC Moroccan Math Procedural Exercise Engine (Limits & Sequences)."""
 
-from .models import ApproachSide, BilingualText, Difficulty, GeneratedExercise, LimitPoint, SolutionStep, Technique
-from .selector import encode_seed, generate_exercise, parse_seed
+from .adaptive import (
+    AdaptivePlan,
+    CHAPTER_CURRICULUM,
+    CURRICULUM_ORDER,
+    FluencyRating,
+    INITIAL_MASTERY,
+    OutcomeEvaluation,
+    TIME_BENCHMARKS,
+    classify_fluency,
+    compute_effective_mastery,
+    compute_next_review_iso,
+    evaluate_outcome,
+    get_curriculum_status,
+    select_adaptive_plan,
+)
+from .models import (
+    AnswerKind,
+    ApproachSide,
+    BilingualText,
+    Chapter,
+    Difficulty,
+    GeneratedExercise,
+    LimitPoint,
+    SolutionStep,
+    Technique,
+    chapter_of_technique,
+)
+from .selector import encode_seed, generate_adaptive_exercise, generate_exercise, parse_seed
 from .verifier import GradeResult, grade_student_answer, verify_limit_cas
 
 __all__ = [
+    "AdaptivePlan",
+    "AnswerKind",
     "ApproachSide",
     "BilingualText",
+    "CHAPTER_CURRICULUM",
+    "CURRICULUM_ORDER",
+    "Chapter",
     "Difficulty",
+    "FluencyRating",
     "GeneratedExercise",
     "GradeResult",
+    "INITIAL_MASTERY",
     "LimitPoint",
+    "OutcomeEvaluation",
     "SolutionStep",
+    "TIME_BENCHMARKS",
     "Technique",
+    "chapter_of_technique",
+    "classify_fluency",
+    "compute_effective_mastery",
+    "compute_next_review_iso",
     "encode_seed",
+    "evaluate_outcome",
+    "generate_adaptive_exercise",
     "generate_exercise",
+    "get_curriculum_status",
     "grade_student_answer",
     "parse_seed",
+    "select_adaptive_plan",
     "verify_limit_cas",
 ]

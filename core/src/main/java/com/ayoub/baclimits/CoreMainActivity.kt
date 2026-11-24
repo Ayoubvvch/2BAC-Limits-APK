@@ -226,10 +226,13 @@ private fun BacLimitsRootApp(viewModel: BacLimitsViewModel) {
                             MainTab.Practice -> PracticeScreen(
                                 ui = ui,
                                 strings = strings,
+                                onSelectChapter = { viewModel.selectChapter(it) },
                                 onOpenTechniqueSheet = { viewModel.setShowTechniqueSheet(true) },
                                 onOpenDifficultySheet = { viewModel.setShowDifficultySheet(true) },
                                 onNewExercise = { viewModel.loadNextExercise(seed = null) },
                                 onOpenSeedDialog = { viewModel.setShowSeedDialog(true) },
+                                onStartExercise = { viewModel.startExercise() },
+                                onPauseOrResumeChrono = { viewModel.pauseOrResumeChrono() },
                                 onOpenFullscreenFormula = { viewModel.openFullscreenFormula(it) },
                                 onRequestHint = { viewModel.requestNextHint() },
                                 onOpenSolution = { viewModel.openSolutionSheet() },
@@ -247,6 +250,7 @@ private fun BacLimitsRootApp(viewModel: BacLimitsViewModel) {
                                 username = ui.username ?: "",
                                 stats = ui.stats,
                                 strings = strings,
+                                isFocusLocked = ui.isFocusLocked,
                                 onRefresh = { viewModel.refreshStatsSilently() },
                                 onPracticeTechnique = { tech -> viewModel.selectTechniqueAndLoad(tech) }
                             )
@@ -286,7 +290,9 @@ private fun BacLimitsRootApp(viewModel: BacLimitsViewModel) {
         // Modal Sheets & Dialogs
         if (ui.showTechniqueSheet) {
             TechniquePickerSheet(
+                selectedChapter = ui.selectedChapter,
                 selectedTechnique = ui.selectedTechnique,
+                techniqueMasteryMap = ui.stats?.masteryByTechnique?.associateBy { it.technique }.orEmpty(),
                 strings = strings,
                 onSelect = { viewModel.selectTechniqueAndLoad(it) },
                 onDismiss = { viewModel.setShowTechniqueSheet(false) }

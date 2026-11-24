@@ -3,11 +3,13 @@ package com.ayoub.baclimits.ui
 import android.app.Application
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.AndroidViewModel
 import com.ayoub.baclimits.data.AppUpdaterManager
 import com.ayoub.baclimits.data.ExerciseData
+import com.ayoub.baclimits.data.FluencyRating
 import com.ayoub.baclimits.data.GradeFeedback
 import com.ayoub.baclimits.data.LatexFormatter
 import com.ayoub.baclimits.data.LimitsRepository
@@ -18,6 +20,8 @@ import com.ayoub.baclimits.data.StudentDatabase
 import com.ayoub.baclimits.data.StudentStats
 import com.ayoub.baclimits.data.SyncStatusSnapshot
 import com.ayoub.baclimits.data.UpdateCheckState
+import com.ayoub.baclimits.math.LimitsCasEngine
+import com.ayoub.baclimits.ui.i18n.AppStrings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,18 +50,23 @@ data class BacLimitsUiState(
     val displayName: String = "",
     val recentUsers: List<String> = emptyList(),
     val stats: StudentStats? = null,
+    val selectedChapter: String = "limits",
     val selectedTechnique: String = "adaptive",
     val selectedDifficulty: Int = 0,
     val exercise: ExerciseData? = null,
     val hintsShown: List<LocalizedMessage> = emptyList(),
     val lastGrade: GradeFeedback? = null,
     val solution: SolutionData? = null,
+    val currentFluency: FluencyRating? = null,
+    val chronoDisplaySec: Double = 0.0,
     val answerField: TextFieldValue = TextFieldValue(""),
     val livePreviewLatex: String = "",
     val showSystemKeyboard: Boolean = false,
     val isLoggingIn: Boolean = false,
     val loginError: String? = null,
     val isLoadingExercise: Boolean = false,
+    val isStartingExercise: Boolean = false,
+    val isPausingExercise: Boolean = false,
     val isSubmitting: Boolean = false,
     val isLoadingHint: Boolean = false,
     val isLoadingSolution: Boolean = false,
@@ -71,7 +80,9 @@ data class BacLimitsUiState(
     val showUpdaterSheet: Boolean = false,
     val fullscreenFormulaLatex: String? = null,
     val historyFilter: HistoryFilter = HistoryFilter.All
-)
+) {
+    val isFocusLocked: Boolean get() = exercise != null && !exercise.isCompleted
+}
 
 class BacLimitsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -85,6 +96,23 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _uiState = MutableStateFlow(BacLimitsUiState())
     val uiState: StateFlow<BacLimitsUiState> = _uiState.asStateFlow()
+
+    private var timerBaseElapsedSec: Double = 0.0
+    private var timerAnchorMs: Long? = null
+
+    private val timerTickRunnable = object : Runnable {
+        override fun run() {
+            val anchor = timerAnchorMs ?: return
+            val ex = _uiState.value.exercise ?: return
+            if (ex.timer.state != "running" || ex.isCompleted) {
+                timerAnchorMs = null
+                return
+            }
+            val elapsed = timerBaseElapsedSec + ((SystemClock.elapsedRealtime() - anchor).coerceAtLeast(0L) / 1000.0)
+            _uiState.update { it.copy(chronoDisplaySec = elapsed) }
+            mainHandler.postDelayed(this, 250L)
+        }
+    }
 
     private val _syncState = MutableStateFlow(
         SyncStatusSnapshot(
@@ -132,12 +160,14 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
         _updateState.value = updaterManager.getCurrentState()
 
         val (savedUser, initialLang) = repo.getInitialSession()
+        val initialChapter = repo.getInitialChapter()
         val recent = repo.getRecentUsernames()
         val showIme = repo.getShowSystemKeyboard()
 
         _uiState.update {
             it.copy(
                 lang = initialLang,
+                selectedChapter = initialChapter,
                 recentUsers = recent,
                 showSystemKeyboard = showIme
             )
@@ -260,12 +290,12 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
                 repo.saveSession(activeUser, lang)
                 val recent = repo.getRecentUsernames()
 
-                val resumeRes = if (isAutoResume) null else repo.resume(activeUser).getOrNull()
-                val isCompleted = resumeRes == null || !resumeRes.hasExercise || resumeRes.exercise == null ||
-                        resumeRes.lastGrade?.isCorrect == true || resumeRes.solution != null
-                val shouldResume = !isAutoResume && !isCompleted
+                val resumeRes = repo.resume(activeUser, lang).getOrNull()
+                val resumedEx = resumeRes?.exercise
+                val isCompleted = resumeRes == null || !resumeRes.hasExercise || resumedEx == null ||
+                        resumedEx.isCompleted || resumeRes.lastGrade?.isCorrect == true || resumeRes.solution != null
 
-                if (shouldResume && resumeRes != null && resumeRes.exercise != null) {
+                if (!isCompleted && resumedEx != null) {
                     val ans = resumeRes.studentAnswer
                     val preview = LatexFormatter.asciiToPreviewLatex(ans)
                     mainHandler.post {
@@ -277,23 +307,30 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
                                 displayName = activeDisplay,
                                 stats = stats,
                                 recentUsers = recent,
-                                exercise = resumeRes.exercise,
+                                selectedChapter = resumedEx.chapter,
+                                exercise = resumedEx,
                                 hintsShown = resumeRes.hints,
                                 lastGrade = resumeRes.lastGrade,
                                 solution = resumeRes.solution,
+                                currentFluency = resumeRes.fluency,
                                 answerField = TextFieldValue(ans, TextRange(ans.length)),
                                 livePreviewLatex = preview,
                                 selectedTab = MainTab.Practice
                             )
                         }
+                        syncTimerFromExercise(resumedEx)
                     }
                 } else {
+                    val targetChapter = _uiState.value.selectedChapter
                     val exRes = repo.nextExercise(
                         username = activeUser,
+                        chapter = targetChapter,
                         technique = _uiState.value.selectedTechnique,
                         difficulty = _uiState.value.selectedDifficulty,
-                        seed = null
+                        seed = null,
+                        lang = lang
                     )
+                    val loadedEx = exRes.getOrNull()
                     mainHandler.post {
                         _uiState.update {
                             it.copy(
@@ -303,16 +340,19 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
                                 displayName = activeDisplay,
                                 stats = stats,
                                 recentUsers = recent,
-                                exercise = exRes.getOrNull(),
+                                selectedChapter = loadedEx?.chapter ?: targetChapter,
+                                exercise = loadedEx,
                                 hintsShown = emptyList(),
                                 lastGrade = null,
                                 solution = null,
+                                currentFluency = null,
                                 answerField = TextFieldValue(""),
                                 livePreviewLatex = "",
                                 selectedTab = MainTab.Practice,
                                 snackbarMessage = exRes.exceptionOrNull()?.message
                             )
                         }
+                        syncTimerFromExercise(loadedEx)
                     }
                 }
             }.onFailure { err ->
@@ -328,46 +368,147 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    private fun syncTimerFromExercise(ex: ExerciseData?) {
+        mainHandler.removeCallbacks(timerTickRunnable)
+        if (ex == null) {
+            timerBaseElapsedSec = 0.0
+            timerAnchorMs = null
+            _uiState.update { it.copy(chronoDisplaySec = 0.0) }
+            return
+        }
+        val t = ex.timer
+        val base = if (t.state == "running") t.liveElapsedSec.coerceAtLeast(t.elapsedSec) else t.elapsedSec
+        timerBaseElapsedSec = base
+        if (t.state == "running" && !ex.isCompleted) {
+            timerAnchorMs = SystemClock.elapsedRealtime()
+            _uiState.update { it.copy(chronoDisplaySec = base) }
+            mainHandler.postDelayed(timerTickRunnable, 250L)
+        } else {
+            timerAnchorMs = null
+            _uiState.update { it.copy(chronoDisplaySec = base) }
+        }
+    }
+
+    private fun currentClientSolveTimeSec(): Double {
+        val anchor = timerAnchorMs
+        return if (anchor != null) {
+            timerBaseElapsedSec + ((SystemClock.elapsedRealtime() - anchor).coerceAtLeast(0L) / 1000.0)
+        } else {
+            _uiState.value.chronoDisplaySec
+        }
+    }
+
+    private fun checkFocusLockBlocked(targetSeed: String? = null): Boolean {
+        val st = _uiState.value
+        val activeEx = st.exercise
+        if (activeEx != null && !activeEx.isCompleted) {
+            if (!targetSeed.isNullOrBlank() && targetSeed.equals(activeEx.seed, ignoreCase = true)) {
+                return false
+            }
+            val msg = AppStrings.forLang(st.lang).focusLockSwitchBlocked
+            _uiState.update {
+                it.copy(
+                    snackbarMessage = msg,
+                    showTechniqueSheet = false,
+                    showDifficultySheet = false,
+                    showSeedDialog = false
+                )
+            }
+            return true
+        }
+        return false
+    }
+
     fun logout() {
+        syncTimerFromExercise(null)
         repo.clearSession()
         val recent = repo.getRecentUsernames()
         _uiState.update {
             BacLimitsUiState(
                 lang = it.lang,
+                selectedChapter = it.selectedChapter,
                 recentUsers = recent,
                 showSystemKeyboard = it.showSystemKeyboard
             )
         }
     }
 
-    fun selectTechniqueAndLoad(technique: String) {
+    fun selectChapter(chapter: String) {
+        val normalized = if (chapter == "sequences") "sequences" else "limits"
+        if (normalized == _uiState.value.selectedChapter && _uiState.value.exercise != null) {
+            return
+        }
+        if (checkFocusLockBlocked()) return
+        repo.saveChapter(normalized)
         _uiState.update {
             it.copy(
+                selectedChapter = normalized,
+                selectedTechnique = "adaptive"
+            )
+        }
+        loadNextExercise(
+            chapter = normalized,
+            technique = "adaptive",
+            difficulty = _uiState.value.selectedDifficulty,
+            seed = null
+        )
+    }
+
+    fun selectTechniqueAndLoad(technique: String) {
+        if (checkFocusLockBlocked()) return
+        val nextChapter = if (technique == "adaptive") {
+            _uiState.value.selectedChapter
+        } else {
+            LimitsCasEngine.chapterOfTechnique(technique)
+        }
+        repo.saveChapter(nextChapter)
+        _uiState.update {
+            it.copy(
+                selectedChapter = nextChapter,
                 selectedTechnique = technique,
                 showTechniqueSheet = false
             )
         }
-        loadNextExercise(technique = technique, difficulty = _uiState.value.selectedDifficulty, seed = null)
+        loadNextExercise(
+            chapter = nextChapter,
+            technique = technique,
+            difficulty = _uiState.value.selectedDifficulty,
+            seed = null
+        )
     }
 
     fun selectDifficultyAndLoad(difficulty: Int) {
+        if (checkFocusLockBlocked()) return
         _uiState.update {
             it.copy(
                 selectedDifficulty = difficulty,
                 showDifficultySheet = false
             )
         }
-        loadNextExercise(technique = _uiState.value.selectedTechnique, difficulty = difficulty, seed = null)
+        loadNextExercise(
+            chapter = _uiState.value.selectedChapter,
+            technique = _uiState.value.selectedTechnique,
+            difficulty = difficulty,
+            seed = null
+        )
     }
 
     fun loadNextExercise(
+        chapter: String = _uiState.value.selectedChapter,
         technique: String = _uiState.value.selectedTechnique,
         difficulty: Int = _uiState.value.selectedDifficulty,
         seed: String? = null
     ) {
         val user = _uiState.value.username ?: return
+        val currentEx = _uiState.value.exercise
+        if (!seed.isNullOrBlank() && currentEx != null && seed.equals(currentEx.seed, ignoreCase = true)) {
+            _uiState.update { it.copy(showSeedDialog = false, selectedTab = MainTab.Practice) }
+            return
+        }
+        if (checkFocusLockBlocked(seed)) return
         if (_uiState.value.isLoadingExercise) return
 
+        val lang = _uiState.value.lang
         _uiState.update {
             it.copy(
                 isLoadingExercise = true,
@@ -377,20 +518,31 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
         }
 
         ioExecutor.execute {
-            val res = repo.nextExercise(user, technique, difficulty, seed)
+            val res = repo.nextExercise(
+                username = user,
+                chapter = chapter,
+                technique = technique,
+                difficulty = difficulty,
+                seed = seed,
+                lang = lang
+            )
             mainHandler.post {
                 res.onSuccess { ex ->
+                    repo.saveChapter(ex.chapter)
                     _uiState.update {
                         it.copy(
                             isLoadingExercise = false,
+                            selectedChapter = ex.chapter,
                             exercise = ex,
                             hintsShown = emptyList(),
                             lastGrade = null,
                             solution = null,
+                            currentFluency = null,
                             answerField = TextFieldValue(""),
                             livePreviewLatex = ""
                         )
                     }
+                    syncTimerFromExercise(ex)
                     refreshStatsSilently()
                 }.onFailure { err ->
                     _uiState.update {
@@ -404,15 +556,107 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
+    fun startExercise() {
+        val user = _uiState.value.username ?: return
+        val ex = _uiState.value.exercise ?: return
+        if (_uiState.value.isStartingExercise || ex.isRevealed) return
+
+        val lang = _uiState.value.lang
+        _uiState.update { it.copy(isStartingExercise = true) }
+        ioExecutor.execute {
+            val res = repo.startExercise(user, ex.seed, lang)
+            mainHandler.post {
+                res.onSuccess { started ->
+                    _uiState.update {
+                        it.copy(
+                            isStartingExercise = false,
+                            exercise = started
+                        )
+                    }
+                    syncTimerFromExercise(started)
+                    refreshStatsSilently()
+                }.onFailure { err ->
+                    _uiState.update {
+                        it.copy(
+                            isStartingExercise = false,
+                            snackbarMessage = err.message ?: "Error starting exercise"
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun pauseOrResumeChrono() {
+        val user = _uiState.value.username ?: return
+        val ex = _uiState.value.exercise ?: return
+        if (_uiState.value.isPausingExercise || !ex.isRevealed || ex.isCompleted) return
+
+        val lang = _uiState.value.lang
+        val isPaused = ex.timer.state == "paused"
+        _uiState.update { it.copy(isPausingExercise = true) }
+
+        ioExecutor.execute {
+            if (isPaused) {
+                val res = repo.startExercise(user, ex.seed, lang)
+                mainHandler.post {
+                    res.onSuccess { resumed ->
+                        _uiState.update {
+                            it.copy(
+                                isPausingExercise = false,
+                                exercise = resumed
+                            )
+                        }
+                        syncTimerFromExercise(resumed)
+                    }.onFailure { err ->
+                        _uiState.update {
+                            it.copy(
+                                isPausingExercise = false,
+                                snackbarMessage = err.message ?: "Error resuming timer"
+                            )
+                        }
+                    }
+                }
+            } else {
+                val res = repo.pauseExercise(user, ex.seed, lang)
+                mainHandler.post {
+                    res.onSuccess { paused ->
+                        val updatedEx = ex.copy(
+                            isRevealed = paused.isRevealed,
+                            isCompleted = paused.isCompleted,
+                            timer = paused.timer
+                        )
+                        _uiState.update {
+                            it.copy(
+                                isPausingExercise = false,
+                                exercise = updatedEx
+                            )
+                        }
+                        syncTimerFromExercise(updatedEx)
+                    }.onFailure { err ->
+                        _uiState.update {
+                            it.copy(
+                                isPausingExercise = false,
+                                snackbarMessage = err.message ?: "Error pausing timer"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fun requestNextHint() {
         val user = _uiState.value.username ?: return
         val ex = _uiState.value.exercise ?: return
+        if (!ex.isRevealed) return
         val currentIdx = _uiState.value.hintsShown.size
         if (_uiState.value.isLoadingHint || currentIdx >= ex.totalHints) return
 
+        val lang = _uiState.value.lang
         _uiState.update { it.copy(isLoadingHint = true) }
         ioExecutor.execute {
-            val res = repo.requestHint(user, ex.seed, currentIdx)
+            val res = repo.requestHint(user, ex.seed, currentIdx, lang)
             mainHandler.post {
                 res.onSuccess { hint ->
                     _uiState.update {
@@ -436,22 +680,38 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
     fun submitAnswer() {
         val user = _uiState.value.username ?: return
         val ex = _uiState.value.exercise ?: return
+        if (!ex.isRevealed || ex.isCompleted) return
         val answerText = _uiState.value.answerField.text.trim()
         if (_uiState.value.isSubmitting || answerText.isEmpty()) return
 
+        val lang = _uiState.value.lang
+        val elapsedSec = currentClientSolveTimeSec()
         _uiState.update { it.copy(isSubmitting = true) }
         ioExecutor.execute {
-            val res = repo.submitAnswer(user, ex.seed, answerText, _uiState.value.stats)
+            val res = repo.submitAnswer(user, ex.seed, answerText, elapsedSec, _uiState.value.stats, lang)
             mainHandler.post {
                 res.onSuccess { submitResult ->
+                    val completedNow = submitResult.isCompleted || ex.isCompleted || submitResult.grade.isCorrect
+                    val nextTimer = submitResult.timer ?: ex.timer.copy(
+                        state = if (completedNow) "completed" else ex.timer.state,
+                        elapsedSec = elapsedSec,
+                        liveElapsedSec = elapsedSec
+                    )
+                    val updatedEx = ex.copy(
+                        isCompleted = completedNow,
+                        timer = nextTimer
+                    )
                     _uiState.update {
                         it.copy(
                             isSubmitting = false,
+                            exercise = updatedEx,
                             lastGrade = submitResult.grade,
                             stats = submitResult.stats ?: it.stats,
-                            solution = submitResult.solution ?: it.solution
+                            solution = submitResult.solution ?: it.solution,
+                            currentFluency = submitResult.fluency ?: it.currentFluency
                         )
                     }
+                    syncTimerFromExercise(updatedEx)
                     refreshStatsSilently()
                 }.onFailure { err ->
                     _uiState.update {
@@ -466,22 +726,34 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun openSolutionSheet() {
+        val ex = _uiState.value.exercise ?: return
+        if (!ex.isRevealed) return
         _uiState.update { it.copy(showSolutionSheet = true) }
         val user = _uiState.value.username ?: return
-        val ex = _uiState.value.exercise ?: return
         if (_uiState.value.solution != null || _uiState.value.isLoadingSolution) return
 
+        val lang = _uiState.value.lang
         _uiState.update { it.copy(isLoadingSolution = true) }
         ioExecutor.execute {
-            val res = repo.requestSolution(user, ex.seed)
+            val res = repo.requestSolution(user, ex.seed, _uiState.value.stats, lang)
             mainHandler.post {
-                res.onSuccess { sol ->
+                res.onSuccess { solRes ->
+                    val updatedEx = ex.copy(
+                        isCompleted = solRes.isCompleted,
+                        fullLimitLatex = solRes.fullLimitLatex ?: ex.fullLimitLatex,
+                        timer = solRes.timer ?: ex.timer.copy(state = "completed")
+                    )
                     _uiState.update {
                         it.copy(
                             isLoadingSolution = false,
-                            solution = sol
+                            exercise = updatedEx,
+                            solution = solRes.solution,
+                            stats = solRes.stats ?: it.stats,
+                            currentFluency = solRes.fluency ?: it.currentFluency
                         )
                     }
+                    syncTimerFromExercise(updatedEx)
+                    refreshStatsSilently()
                 }.onFailure { err ->
                     _uiState.update {
                         it.copy(
@@ -496,8 +768,9 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun refreshStatsSilently() {
         val user = _uiState.value.username ?: return
+        val lang = _uiState.value.lang
         ioExecutor.execute {
-            val res = repo.stats(user, _uiState.value.stats)
+            val res = repo.stats(user, _uiState.value.stats, lang)
             res.onSuccess { fresh ->
                 mainHandler.post {
                     _uiState.update { it.copy(stats = fresh) }
@@ -512,6 +785,7 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
 
         syncManager.triggerSyncNow(forceHealth = true) { _ ->
             val user = _uiState.value.username
+            val lang = _uiState.value.lang
             if (user == null) {
                 mainHandler.post {
                     _uiState.update { it.copy(isSyncingAccount = false) }
@@ -519,22 +793,27 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
                 return@triggerSyncNow
             }
             ioExecutor.execute {
-                val statsRes = repo.stats(user, _uiState.value.stats)
-                val resumeRes = repo.resume(user).getOrNull()
+                val statsRes = repo.stats(user, _uiState.value.stats, lang)
+                val resumeRes = repo.resume(user, lang).getOrNull()
                 mainHandler.post {
+                    val resumedEx = resumeRes?.exercise
+                    val isCompleted = resumeRes == null || !resumeRes.hasExercise || resumedEx == null ||
+                            resumedEx.isCompleted || resumeRes.lastGrade?.isCorrect == true || resumeRes.solution != null
+                    var syncedExToTick: ExerciseData? = null
                     _uiState.update { state ->
                         val nextStats = statsRes.getOrNull() ?: state.stats
-                        val isCompleted = resumeRes == null || !resumeRes.hasExercise || resumeRes.exercise == null ||
-                                resumeRes.lastGrade?.isCorrect == true || resumeRes.solution != null
-                        if (!isCompleted && state.exercise == null && resumeRes != null && resumeRes.exercise != null) {
+                        if (!isCompleted && state.exercise == null && resumedEx != null) {
                             val ans = resumeRes.studentAnswer
+                            syncedExToTick = resumedEx
                             state.copy(
                                 isSyncingAccount = false,
                                 stats = nextStats,
-                                exercise = resumeRes.exercise,
+                                selectedChapter = resumedEx.chapter,
+                                exercise = resumedEx,
                                 hintsShown = resumeRes.hints,
                                 lastGrade = resumeRes.lastGrade,
                                 solution = resumeRes.solution,
+                                currentFluency = resumeRes.fluency,
                                 answerField = TextFieldValue(ans, TextRange(ans.length)),
                                 livePreviewLatex = LatexFormatter.asciiToPreviewLatex(ans)
                             )
@@ -545,6 +824,7 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
                             )
                         }
                     }
+                    syncedExToTick?.let { syncTimerFromExercise(it) }
                 }
             }
         }
@@ -598,7 +878,11 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
         if (start <= 0) return
 
         // Delete multi-char function prefixes as a clean single unit when cursor sits right after "("
-        val prefixDeletes = listOf("sin()", "cos()", "tan()", "sqrt(", "cbrt(", "qdrt(", "⁴√(", "sin(", "cos(", "tan(", "√(", "∛(")
+        val prefixDeletes = listOf(
+            "sin()", "cos()", "tan()", "ln()", "exp()", "abs()", "e^()",
+            "sqrt(", "cbrt(", "qdrt(", "⁴√(",
+            "sin(", "cos(", "tan(", "ln(", "exp(", "abs(", "e^(", "√(", "∛("
+        )
         val before = text.substring(0, start)
         for (p in prefixDeletes) {
             if (before.endsWith(p)) {
@@ -619,6 +903,7 @@ class BacLimitsViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     override fun onCleared() {
+        mainHandler.removeCallbacks(timerTickRunnable)
         syncManager.stopMonitoring()
         ioExecutor.shutdownNow()
         super.onCleared()

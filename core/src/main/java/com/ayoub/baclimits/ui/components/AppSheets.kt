@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.CloudDone
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.AlertDialog
@@ -60,30 +61,29 @@ import com.ayoub.baclimits.core.BuildConfig
 import com.ayoub.baclimits.data.LocalizedMessage
 import com.ayoub.baclimits.data.SolutionData
 import com.ayoub.baclimits.data.SyncStatusSnapshot
+import com.ayoub.baclimits.data.TechniqueMastery
 import com.ayoub.baclimits.data.UpdateCheckState
+import com.ayoub.baclimits.math.LimitsCasEngine
 import com.ayoub.baclimits.ui.i18n.AppStrings
 import com.ayoub.baclimits.ui.theme.OledColors
 import java.text.DateFormat
 import java.util.Date
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TechniquePickerSheet(
+    selectedChapter: String,
     selectedTechnique: String,
+    techniqueMasteryMap: Map<String, TechniqueMastery> = emptyMap(),
     strings: AppStrings,
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val orderedKeys = listOf(
-        "adaptive",
-        "poly_factor",
-        "sqrt_conjugate",
-        "nth_root",
-        "add_sub_zero",
-        "trig",
-        "hybrid"
-    )
+    val orderedKeys = remember(selectedChapter) {
+        listOf("adaptive") + LimitsCasEngine.techniquesForChapter(selectedChapter)
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -99,13 +99,33 @@ fun TechniquePickerSheet(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(
-                text = strings.techniqueLabel,
-                style = MaterialTheme.typography.titleLarge
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = strings.techniqueLabel,
+                    style = MaterialTheme.typography.titleLarge
+                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = OledColors.PrimarySoft,
+                    border = BorderStroke(1.dp, OledColors.Primary.copy(alpha = 0.4f))
+                ) {
+                    Text(
+                        text = if (selectedChapter == "sequences") strings.chapterSequences else strings.chapterLimits,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color(0xFF93C5FD),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
 
             orderedKeys.forEach { key ->
                 val selected = key == selectedTechnique
+                val mastery = techniqueMasteryMap[key]
+                val isLocked = mastery != null && !mastery.isUnlocked && key != "adaptive"
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -114,7 +134,11 @@ fun TechniquePickerSheet(
                     color = if (selected) OledColors.PrimarySoft else OledColors.SurfaceElevated,
                     border = BorderStroke(
                         1.dp,
-                        if (selected) OledColors.Primary else OledColors.Border
+                        when {
+                            selected -> OledColors.Primary
+                            isLocked -> OledColors.Border
+                            else -> OledColors.BorderStrong
+                        }
                     )
                 ) {
                     Row(
@@ -122,16 +146,46 @@ fun TechniquePickerSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = strings.techniques[key] ?: key,
-                                style = MaterialTheme.typography.titleMedium,
-                                color = if (selected) Color(0xFF93C5FD) else OledColors.TextPrimary
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = strings.techniques[key] ?: key,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = when {
+                                        selected -> Color(0xFF93C5FD)
+                                        isLocked -> OledColors.TextSecondary
+                                        else -> OledColors.TextPrimary
+                                    }
+                                )
+                                if (isLocked) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Lock,
+                                        contentDescription = strings.lockedSkillTag,
+                                        tint = OledColors.Amber,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                } else if (mastery != null && mastery.attempts > 0) {
+                                    Text(
+                                        text = "${mastery.effectiveMastery.roundToInt()}%",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = OledColors.Teal
+                                    )
+                                }
+                            }
                             Spacer(modifier = Modifier.height(3.dp))
+                            val descText = if (isLocked && mastery?.unlockHint != null) {
+                                mastery.unlockHint.get(strings.langCode).ifBlank {
+                                    strings.techniqueDescriptions[key] ?: ""
+                                }
+                            } else {
+                                strings.techniqueDescriptions[key] ?: ""
+                            }
                             Text(
-                                text = strings.techniqueDescriptions[key] ?: "",
+                                text = descText,
                                 style = MaterialTheme.typography.bodySmall,
-                                color = OledColors.TextSecondary
+                                color = if (isLocked) OledColors.Amber else OledColors.TextSecondary
                             )
                         }
                         if (selected) {

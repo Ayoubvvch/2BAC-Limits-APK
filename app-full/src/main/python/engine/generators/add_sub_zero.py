@@ -190,7 +190,7 @@ def _build_add_zero_oo_times_0(rng: random.Random, seed: str, difficulty: Diffic
             latex=rf"\lim_{{x \to +\infty}} {full_tex} \quad (\text{{FI }} \infty \times 0)",
         ),
         SolutionStep(
-            title=BilingualText(ar="إضافة وطرح العدد 1", fr="Ajout et retranchement de 1"),
+            title=BilingualText(ar=r"إضافة وطرح العدد $1$", fr=r"Ajout et retranchement de $1$"),
             explanation=BilingualText(
                 ar="نضيف ونطرح $1$ داخل القوسين لفصل الجذر التربيعي عن الجذر التكعيبي:",
                 fr="On ajoute et on retranche $1$ à l'intérieur des parenthèses pour séparer les deux radicaux :",
@@ -198,7 +198,7 @@ def _build_add_zero_oo_times_0(rng: random.Random, seed: str, difficulty: Diffic
             latex=rf"x\left[({r1_tex} - 1) - ({r2_tex} - 1)\right]",
         ),
         SolutionStep(
-            title=BilingualText(ar="المرافق والاختزال بـ x", fr="Conjugués et simplification par x"),
+            title=BilingualText(ar=r"المرافق والاختزال بـ $x$", fr=r"Conjugués et simplification par $x$"),
             explanation=BilingualText(
                 ar="نطبق المرافق على كل جزء فنختزل بـ $x$:",
                 fr="On applique le conjugué adapté à chaque terme, ce qui simplifie le facteur $x$ :",

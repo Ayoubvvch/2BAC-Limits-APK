@@ -1,7 +1,5 @@
 package com.ayoub.baclimits.data
 
-import com.ayoub.baclimits.math.LimitsCasEngine
-import com.ayoub.baclimits.math.MathExprEvaluator
 import org.json.JSONObject
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -53,8 +51,8 @@ class LocalLimitsApi(
 
         // POST /api/login
         if (method == "POST" && path == "/api/login") {
-            val username = body.optString("username", "").trim()
-            val lang = body.optString("lang", "ar")
+            val username = body.optCleanString("username").trim()
+            val lang = body.optCleanString("lang", "ar")
             validateUsername(username, lang)
 
             gateway?.flushPendingSync()
@@ -62,8 +60,7 @@ class LocalLimitsApi(
             if (remote != null) {
                 if (remote.status in 200..299) {
                     try {
-                        val json = JSONObject(remote.bodyJson)
-                        db.cacheRemoteStats(json, fallbackUsername = username)
+                        db.cacheRemoteStats(JSONObject(remote.bodyJson), fallbackUsername = username)
                     } catch (_: Exception) {
                     }
                     gateway?.onRemoteSuccess()
@@ -84,8 +81,7 @@ class LocalLimitsApi(
             if (remote != null) {
                 if (remote.status in 200..299) {
                     try {
-                        val json = JSONObject(remote.bodyJson)
-                        db.cacheRemoteResume(user, json)
+                        db.cacheRemoteResume(user, JSONObject(remote.bodyJson))
                     } catch (_: Exception) {
                     }
                     gateway?.onRemoteSuccess()
@@ -104,8 +100,7 @@ class LocalLimitsApi(
             if (remote != null) {
                 if (remote.status in 200..299) {
                     try {
-                        val json = JSONObject(remote.bodyJson)
-                        db.cacheRemoteStats(json, fallbackUsername = user)
+                        db.cacheRemoteStats(JSONObject(remote.bodyJson), fallbackUsername = user)
                     } catch (_: Exception) {
                     }
                     gateway?.onRemoteSuccess()
@@ -119,7 +114,7 @@ class LocalLimitsApi(
         val langMatch = Regex("^/api/student/([^/]+)/lang$").matchEntire(path)
         if (method == "POST" && langMatch != null) {
             val user = decode(langMatch.groupValues[1])
-            val lang = body.optString("lang", "ar")
+            val lang = body.optCleanString("lang", "ar")
             db.ensureStudentRow(user, lang)
             db.updateLang(user, lang)
 
@@ -133,15 +128,16 @@ class LocalLimitsApi(
             }
 
             gateway?.enqueue(user, "remote_lang", remotePath, body)
-            return ok(JSONObject().put("ok", true).put("lang", lang))
+            return ok(JSONObject().put("preferred_lang", lang))
         }
 
         // POST /api/exercises/next
         if (method == "POST" && path == "/api/exercises/next") {
-            val user = body.optString("username", "").trim()
-            val tech = body.optString("technique", "adaptive")
+            val user = body.optCleanString("username").trim()
+            val chapter = body.optCleanString("chapter", "limits").ifBlank { "limits" }
+            val tech = body.optCleanString("technique", "adaptive").ifBlank { "adaptive" }
             val diff = body.optInt("difficulty", 0)
-            val explicitSeed = if (body.isNull("seed")) null else body.optString("seed", "").trim().takeIf { it.isNotBlank() }
+            val explicitSeed = body.optCleanString("seed").trim().takeIf { it.isNotBlank() }
 
             val remote = gateway?.execute("POST", "/api/exercises/next", body.toString())
             if (remote != null) {
@@ -156,7 +152,18 @@ class LocalLimitsApi(
                 return remote
             }
 
-            if (user.isNotBlank()) db.ensureStudentRow(user)
+            if (user.isNotBlank()) {
+                db.ensureStudentRow(user)
+                val activeIncomplete = db.getActiveIncompleteSeed(user)
+                if (activeIncomplete != null && explicitSeed?.uppercase() != activeIncomplete.uppercase()) {
+                    val lockDetail = JSONObject()
+                        .put("code", "ACTIVE_EXERCISE_LOCKED")
+                        .put("active_seed", activeIncomplete)
+                        .put("ar", "أكمل التمرين الحالي أولاً (أجب عنه أو اعرض الحل المفصل) لفتح التمرين التالي.")
+                        .put("fr", "Terminez d'abord l'exercice en cours (résolvez-le ou affichez la solution) avant d'en lancer un nouveau.")
+                    return ApiResponse(409, JSONObject().put("detail", lockDetail).toString())
+                }
+            }
 
             val engine = OfflineLimitsEngineHolder.get()
 
@@ -174,22 +181,92 @@ class LocalLimitsApi(
                 }
             }
 
-            val (weakest, suggestedDiff) = db.getWeakestTechniqueAndDifficulty(user)
+            val (weakest, suggestedDiff) = db.getWeakestTechniqueAndDifficulty(user, chapter)
             val ex = engine.generate(
                 requestedTechnique = tech,
                 requestedDifficulty = diff,
                 explicitSeed = explicitSeed,
                 weakestTechnique = weakest,
-                suggestedDifficulty = suggestedDiff
+                suggestedDifficulty = suggestedDiff,
+                chapter = chapter
             )
-            if (user.isNotBlank()) db.setActiveExercise(user, ex)
-            return ok(db.exerciseToJson(ex))
+
+            val coachMode = if (tech == "adaptive") "balanced" else "manual"
+            val (coachAr, coachFr) = if (tech == "adaptive") {
+                "وضع أوفلاين الذكي: تمرين معاير لمستواك الحالي." to "Mode hors-ligne adaptatif : exercice calibré à ton niveau."
+            } else {
+                null to null
+            }
+
+            if (user.isNotBlank()) {
+                db.setActiveExercise(user, ex, coachMode = coachMode, coachAr = coachAr, coachFr = coachFr)
+            }
+            val coachStr = if (coachAr != null) {
+                JSONObject().put("mode", coachMode).put("reason", JSONObject().put("ar", coachAr).put("fr", coachFr)).toString()
+            } else null
+
+            return ok(db.exerciseToJson(ex, isRevealed = false, isCompleted = false, timerState = "ready", coachJsonStr = coachStr))
+        }
+
+        // POST /api/exercises/start
+        if (method == "POST" && path == "/api/exercises/start") {
+            val user = body.optCleanString("username").trim()
+            val seed = body.optCleanString("seed").trim()
+
+            val remote = gateway?.execute("POST", "/api/exercises/start", body.toString())
+            if (remote != null) {
+                if (remote.status in 200..299) {
+                    try {
+                        val json = JSONObject(remote.bodyJson)
+                        db.cacheServerExercise(json, usernameRaw = user.ifBlank { null })
+                    } catch (_: Exception) {
+                    }
+                    gateway?.onRemoteSuccess()
+                }
+                return remote
+            }
+
+            if (RemoteSyncProtocol.isServerSeed(seed)) {
+                gateway?.enqueue(user, "remote_start", "/api/exercises/start", body)
+            }
+            val started = db.startOrResumeOfflineTimer(user, seed)
+            if (started != null) {
+                return ok(started)
+            }
+            val engine = OfflineLimitsEngineHolder.get()
+            if (engine.isValidSeed(seed)) {
+                val ex = engine.generate("adaptive", 0, explicitSeed = seed)
+                if (user.isNotBlank()) db.setActiveExercise(user, ex)
+                val startedFallback = db.startOrResumeOfflineTimer(user, ex.seed)
+                if (startedFallback != null) return ok(startedFallback)
+                return ok(db.exerciseToJson(ex, isRevealed = true, timerState = "running"))
+            }
+            return err(404, "Exercise not found offline")
+        }
+
+        // POST /api/exercises/pause
+        if (method == "POST" && path == "/api/exercises/pause") {
+            val user = body.optCleanString("username").trim()
+            val seed = body.optCleanString("seed").trim()
+
+            val remote = gateway?.execute("POST", "/api/exercises/pause", body.toString())
+            if (remote != null) {
+                if (remote.status in 200..299) {
+                    gateway?.onRemoteSuccess()
+                }
+                return remote
+            }
+
+            if (RemoteSyncProtocol.isServerSeed(seed)) {
+                gateway?.enqueue(user, "remote_pause", "/api/exercises/pause", body)
+            }
+            return ok(db.pauseOfflineTimer(user, seed))
         }
 
         // POST /api/exercises/hint
         if (method == "POST" && path == "/api/exercises/hint") {
-            val user = body.optString("username", "").trim()
-            val seed = body.optString("seed", "").trim()
+            val user = body.optCleanString("username").trim()
+            val seed = body.optCleanString("seed").trim()
             val hintIndex = body.optInt("hint_index", 0)
 
             val remote = gateway?.execute("POST", "/api/exercises/hint", body.toString())
@@ -209,8 +286,11 @@ class LocalLimitsApi(
                 return remote
             }
 
-            val engine = OfflineLimitsEngineHolder.get()
+            if (user.isNotBlank() && !db.isActiveRevealed(user, seed)) {
+                return err(400, "Start the exercise first before requesting a hint.")
+            }
 
+            val engine = OfflineLimitsEngineHolder.get()
             if (engine.isValidSeed(seed)) {
                 val ex = engine.generate("adaptive", 0, explicitSeed = seed)
                 if (hintIndex !in ex.hints.indices) {
@@ -219,10 +299,11 @@ class LocalLimitsApi(
                 if (user.isNotBlank()) db.recordHintShown(user, ex.seed, hintIndex)
                 val h = ex.hints[hintIndex]
                 return ok(
-                    JSONObject().put(
-                        "hint",
-                        JSONObject().put("ar", h.ar).put("fr", h.fr)
-                    )
+                    JSONObject()
+                        .put("seed", ex.seed)
+                        .put("hint_index", hintIndex)
+                        .put("total_hints", ex.hints.size)
+                        .put("hint", JSONObject().put("ar", h.ar).put("fr", h.fr))
                 )
             }
 
@@ -237,8 +318,8 @@ class LocalLimitsApi(
 
         // POST /api/exercises/solution
         if (method == "POST" && path == "/api/exercises/solution") {
-            val user = body.optString("username", "").trim()
-            val seed = body.optString("seed", "").trim()
+            val user = body.optCleanString("username").trim()
+            val seed = body.optCleanString("seed").trim()
 
             val remote = gateway?.execute("POST", "/api/exercises/solution", body.toString())
             if (remote != null) {
@@ -247,6 +328,10 @@ class LocalLimitsApi(
                         val json = JSONObject(remote.bodyJson)
                         db.cacheServerSolution(user, seed, json)
                         if (user.isNotBlank()) db.recordSolutionRevealed(user, seed)
+                        val statsObj = json.optJSONObject("stats")
+                        if (statsObj != null) {
+                            db.cacheRemoteStats(statsObj, fallbackUsername = user)
+                        }
                     } catch (_: Exception) {
                     }
                     gateway?.onRemoteSuccess()
@@ -255,16 +340,34 @@ class LocalLimitsApi(
             }
 
             val engine = OfflineLimitsEngineHolder.get()
-
             if (engine.isValidSeed(seed)) {
                 val ex = engine.generate("adaptive", 0, explicitSeed = seed)
-                if (user.isNotBlank()) db.recordSolutionRevealed(user, ex.seed)
-                return ok(db.solutionToJson(ex))
+                val solJson = db.solutionToJson(ex)
+                solJson.put("seed", ex.seed)
+                solJson.put("full_limit_latex", ex.fullLimitLatex)
+                if (user.isNotBlank()) {
+                    val outcome = db.recordSolutionRevealed(user, ex.seed)
+                    if (outcome != null) {
+                        solJson.put("fluency", outcome.opt("fluency"))
+                        solJson.put("timer", outcome.opt("timer"))
+                        solJson.put("is_completed", true)
+                        solJson.put("stats", outcome.opt("stats"))
+                    }
+                }
+                return ok(solJson)
             }
 
             val cachedSol = db.getCachedServerSolution(seed)
             if (cachedSol != null) {
-                if (user.isNotBlank()) db.recordSolutionRevealed(user, seed)
+                if (user.isNotBlank()) {
+                    val outcome = db.recordSolutionRevealed(user, seed)
+                    if (outcome != null) {
+                        cachedSol.put("fluency", outcome.opt("fluency"))
+                        cachedSol.put("timer", outcome.opt("timer"))
+                        cachedSol.put("is_completed", true)
+                        cachedSol.put("stats", outcome.opt("stats"))
+                    }
+                }
                 gateway?.enqueue(user, "remote_solution", "/api/exercises/solution", body)
                 return ok(cachedSol)
             }
@@ -273,9 +376,10 @@ class LocalLimitsApi(
 
         // POST /api/exercises/submit
         if (method == "POST" && path == "/api/exercises/submit") {
-            val user = body.optString("username", "").trim()
-            val seed = body.optString("seed", "").trim()
-            val rawAnswer = body.optString("answer", "")
+            val user = body.optCleanString("username").trim()
+            val seed = body.optCleanString("seed").trim()
+            val rawAnswer = body.optCleanString("answer")
+            val solveTimeSec = body.optNullableDouble("solve_time_sec")
 
             val remote = gateway?.execute("POST", "/api/exercises/submit", body.toString())
             if (remote != null) {
@@ -284,14 +388,15 @@ class LocalLimitsApi(
                         val json = JSONObject(remote.bodyJson)
                         val statsObj = json.optJSONObject("stats")
                         val gradeObj = json.optJSONObject("grade")
-                        val solObj = json.optJSONObject("solution")
+                        val solObj = if (json.isNull("solution")) null else json.optJSONObject("solution")
+                        val isCompleted = json.optBoolean("is_completed", false)
                         if (statsObj != null) {
                             db.cacheRemoteStats(statsObj, fallbackUsername = user)
                         }
                         if (solObj != null) {
                             db.cacheServerSolution(user, seed, solObj)
                         }
-                        db.updateCachedResumeAfterSubmit(user, seed, rawAnswer, gradeObj, solObj)
+                        db.updateCachedResumeAfterSubmit(user, seed, rawAnswer, gradeObj, solObj, isCompleted)
                     } catch (_: Exception) {
                     }
                     gateway?.onRemoteSuccess()
@@ -300,11 +405,10 @@ class LocalLimitsApi(
             }
 
             val engine = OfflineLimitsEngineHolder.get()
-
             if (!engine.isValidSeed(seed)) {
                 return err(
                     503,
-                    "السيرفر غير متصل حالياً لتصحيح هذا التمرين السحابي. اضغط «تمرين جديد» للتدريب أوفلاين، أو أعد التحقق عند عودة الاتصال."
+                    "السيرفر غير متصل حالياً لتصحيح هذا التمرين السحابي. اتصل بالإنترنت لإكمال التمرين."
                 )
             }
 
@@ -313,20 +417,49 @@ class LocalLimitsApi(
                 expectedAnswer = ex.expectedAnswer,
                 studentAnswer = rawAnswer,
                 expectedLatex = ex.answerLatex,
-                expectedSympyStr = ex.answerSympyStr
+                expectedSympyStr = ex.answerSympyStr,
+                answerKind = ex.answerKind
             )
 
             val gradeObj = JSONObject()
+                .put("valid_syntax", evalResult.validSyntax)
                 .put("is_correct", evalResult.isCorrect)
+                .put("student_latex", evalResult.studentLatex)
+                .put("expected_latex", evalResult.expectedLatex)
                 .put("message", JSONObject().put("ar", evalResult.messageAr).put("fr", evalResult.messageFr))
 
-            val updatedStats = db.recordSubmission(user, ex, rawAnswer, evalResult.isCorrect, gradeObj)
+            if (!evalResult.validSyntax) {
+                return ok(
+                    JSONObject()
+                        .put("seed", ex.seed)
+                        .put("grade", gradeObj)
+                        .put("fluency", JSONObject.NULL)
+                        .put("stats", db.getStatsJson(user))
+                        .put("solution", JSONObject.NULL)
+                        .put("is_completed", false)
+                )
+            }
+
+            val outcome = db.recordSubmission(
+                usernameKey = user,
+                ex = ex,
+                rawAnswer = rawAnswer,
+                isCorrect = evalResult.isCorrect,
+                gradeJson = gradeObj,
+                solveTimeSecOverride = solveTimeSec
+            )
 
             val resp = JSONObject().apply {
+                put("seed", ex.seed)
                 put("grade", gradeObj)
-                put("stats", updatedStats)
+                put("fluency", outcome.opt("fluency"))
+                put("stats", outcome.opt("stats"))
+                put("timer", outcome.opt("timer"))
+                put("is_completed", outcome.optBoolean("is_completed", evalResult.isCorrect))
                 if (evalResult.isCorrect) {
                     put("solution", db.solutionToJson(ex))
+                } else {
+                    put("solution", JSONObject.NULL)
                 }
             }
             return ok(resp)

@@ -31,8 +31,8 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
     private val isInitialized = AtomicBoolean(false)
     private var initError: String? = null
 
-    // Cache to hold answer_sympy_str by seed for exact symbolic grading
     private val sympyStrCache = mutableMapOf<String, String>()
+    private val coachCache = mutableMapOf<String, Pair<String, LocalizedText>>()
 
     init {
         Thread {
@@ -59,13 +59,20 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
         }
     }
 
+    fun getCachedCoach(seed: String): Pair<String, LocalizedText>? {
+        synchronized(coachCache) {
+            return coachCache[seed]
+        }
+    }
+
     override fun generate(
         requestedTechnique: String,
         requestedDifficulty: Int,
         explicitSeed: String?,
         weakestTechnique: String?,
         suggestedDifficulty: Int,
-        masteryJson: String?
+        masteryJson: String?,
+        chapter: String
     ): GeneratedExercise {
         if (!ensurePythonInitialized()) {
             throw IllegalStateException("Chaquopy Python engine failed to initialize: $initError")
@@ -78,7 +85,8 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
             requestedTechnique,
             requestedDifficulty,
             explicitSeed,
-            masteryJson
+            masteryJson,
+            chapter
         ).toString()
 
         val resJson = JSONObject(resStr)
@@ -89,6 +97,18 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
             if (sympyStr.isNotBlank()) {
                 synchronized(sympyStrCache) {
                     sympyStrCache[seed] = sympyStr
+                }
+            }
+            val coachObj = exJson.optJSONObject("coach")
+            if (coachObj != null) {
+                val reasonObj = coachObj.optJSONObject("reason")
+                if (reasonObj != null) {
+                    synchronized(coachCache) {
+                        coachCache[seed] = coachObj.optString("mode", "balanced") to LocalizedText(
+                            ar = reasonObj.optString("ar", ""),
+                            fr = reasonObj.optString("fr", "")
+                        )
+                    }
                 }
             }
 
@@ -117,7 +137,8 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
         expectedAnswer: ExpectedAnswer,
         studentAnswer: String,
         expectedLatex: String?,
-        expectedSympyStr: String?
+        expectedSympyStr: String?,
+        answerKind: String
     ): EvaluationResult {
         if (!ensurePythonInitialized()) {
             return EvaluationResult(
@@ -139,7 +160,12 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
         return try {
             val py = Python.getInstance()
             val bridge = py.getModule("engine_bridge")
-            val resStr = bridge.callAttr("grade_answer_json", studentAnswer, targetSympy).toString()
+            val resStr = bridge.callAttr(
+                "grade_answer_json",
+                studentAnswer,
+                targetSympy,
+                answerKind
+            ).toString()
             val resJson = JSONObject(resStr)
             if (resJson.optString("status") == "ok") {
                 val grade = resJson.getJSONObject("grade")
@@ -153,7 +179,9 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
                     isCorrect = isCorrect,
                     messageAr = msgAr,
                     messageFr = msgFr,
-                    validSyntax = validSyntax
+                    validSyntax = validSyntax,
+                    studentLatex = grade.optString("student_latex", ""),
+                    expectedLatex = grade.optString("expected_latex", "")
                 )
             } else {
                 val err = resJson.optString("error", "Erreur d'évaluation")
@@ -178,10 +206,25 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
     private fun parseExerciseFromJson(json: JSONObject): GeneratedExercise {
         val seed = json.getString("seed")
         val technique = json.optString("technique", "adaptive")
+        val chapter = json.optString("chapter", if (technique.startsWith("seq_")) "sequences" else "limits")
+        val answerKind = json.optString("answer_kind", "constant")
         val difficulty = json.optInt("difficulty", 1)
         val fullLimitLatex = json.optString("full_limit_latex", "")
         val answerLatex = json.optString("answer_latex", "")
         val answerSympyStr = json.optString("answer_sympy_str", "")
+
+        val promptObj = json.optJSONObject("prompt")
+        val prompt = if (promptObj != null) {
+            LocalizedText(
+                ar = promptObj.optString("ar", "احسب النهاية التالية:"),
+                fr = promptObj.optString("fr", "Calculer la limite suivante :")
+            )
+        } else {
+            LocalizedText(
+                ar = "احسب النهاية التالية:",
+                fr = "Calculer la limite suivante :"
+            )
+        }
 
         val hints = mutableListOf<LocalizedText>()
         val hintsArr = json.optJSONArray("hints")
@@ -243,7 +286,10 @@ class FullPythonLimitsEngine(private val context: Context) : OfflineLimitsEngine
             answerLatex = answerLatex,
             expectedAnswer = expectedAnswer,
             steps = steps,
-            answerSympyStr = answerSympyStr
+            answerSympyStr = answerSympyStr,
+            chapter = chapter,
+            answerKind = answerKind,
+            prompt = prompt
         )
     }
 }

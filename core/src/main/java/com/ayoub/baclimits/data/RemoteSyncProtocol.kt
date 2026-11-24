@@ -9,6 +9,25 @@ object RemoteSyncProtocol {
     private val SERVER_SEED_REGEX = Regex("^2BAC-[A-Z0-9]{4}-L[123]-[0-9A-F]{10,}$")
     private val LOCAL_SEED_REGEX = Regex("^2BAC-[A-Z0-9]{4}-L[123]-[0-9A-F]{8}$")
 
+    fun inferTechniqueFromSeed(seed: String): String {
+        val code = seed.trim().uppercase().split("-").getOrNull(1).orEmpty()
+        return when (code) {
+            "POLY" -> "poly_factor"
+            "SQRT" -> "sqrt_conjugate"
+            "NTHR", "NROT" -> "nth_root"
+            "LNLM" -> "ln_limits"
+            "EXPL" -> "exp_limits"
+            "ADD0" -> "add_sub_zero"
+            "TRIG" -> "trig"
+            "HYBR" -> "hybrid"
+            "SQLM" -> "seq_limits"
+            "SQAG" -> "seq_arith_geo"
+            "SQFP" -> "seq_fixed_point"
+            "SQHM" -> "seq_homographic"
+            else -> "adaptive"
+        }
+    }
+
     fun normalizeBaseUrl(rawUrl: String?): String {
         val trimmed = rawUrl?.trim().orEmpty()
         if (trimmed.isEmpty()) return DEFAULT_SERVER_URL
@@ -75,8 +94,6 @@ object RemoteSyncProtocol {
                 return when {
                     raw == 0.0 -> 0
                     raw <= 1.0 -> {
-                        // Disambiguate 1.0 (100% ratio) vs 1 (1% integer):
-                        // if totalAttempts > 0 and solved/attempts >= 0.5, 1.0 means 100%.
                         if (raw == 1.0 && totalAttempts > 0 && (totalSolved.toDouble() / totalAttempts) < 0.1) {
                             1
                         } else {

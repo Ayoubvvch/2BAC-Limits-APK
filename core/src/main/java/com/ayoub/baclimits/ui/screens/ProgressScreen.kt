@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,8 +24,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
@@ -35,6 +38,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +53,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ayoub.baclimits.data.StudentStats
 import com.ayoub.baclimits.data.TechniqueMastery
+import com.ayoub.baclimits.math.LimitsCasEngine
 import com.ayoub.baclimits.ui.i18n.AppStrings
 import com.ayoub.baclimits.ui.theme.OledColors
+import kotlin.math.roundToInt
 
 @Composable
 fun ProgressScreen(
@@ -56,12 +64,18 @@ fun ProgressScreen(
     username: String,
     stats: StudentStats?,
     strings: AppStrings,
+    isFocusLocked: Boolean = false,
     onRefresh: () -> Unit,
     onPracticeTechnique: (String) -> Unit
 ) {
     val totalSolved = stats?.totalSolved ?: 0
     val accuracy = (stats?.accuracy ?: 0).coerceIn(0, 100)
     val streak = stats?.currentStreak ?: 0
+    val bestStreak = stats?.bestStreak ?: streak
+    val avgTimeText = stats?.avgSolveTimeSec?.let { "${it.roundToInt()}s" } ?: "—"
+    val dueCount = stats?.dueReviewsCount ?: 0
+    var roadmapChapter by remember { mutableStateOf("limits") }
+
     val animatedAcc by animateFloatAsState(
         targetValue = accuracy / 100f,
         animationSpec = tween(durationMillis = 700),
@@ -218,50 +232,146 @@ fun ProgressScreen(
                     }
                 }
 
-                Row(
+                Column(
                     modifier = Modifier.weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    KpiMiniTile(
-                        value = totalSolved.toString(),
-                        label = strings.lblSolved,
-                        accent = OledColors.Teal,
-                        modifier = Modifier.weight(1f)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        KpiMiniTile(
+                            value = totalSolved.toString(),
+                            label = strings.lblSolved,
+                            accent = OledColors.Teal,
+                            modifier = Modifier.weight(1f)
+                        )
+                        KpiMiniTile(
+                            value = streak.toString(),
+                            label = strings.lblStreak,
+                            accent = OledColors.Amber,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        KpiMiniTile(
+                            value = bestStreak.toString(),
+                            label = strings.bestStreakLabel,
+                            accent = OledColors.Primary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        KpiMiniTile(
+                            value = avgTimeText,
+                            label = strings.lblAvgTime,
+                            accent = OledColors.Green,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+        }
+
+        if (dueCount > 0) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = OledColors.AmberSoft,
+                border = BorderStroke(1.dp, OledColors.Amber.copy(alpha = 0.4f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.Schedule,
+                        contentDescription = null,
+                        tint = OledColors.Amber,
+                        modifier = Modifier.size(18.dp)
                     )
-                    KpiMiniTile(
-                        value = streak.toString(),
-                        label = strings.lblStreak,
-                        accent = OledColors.Amber,
-                        modifier = Modifier.weight(1f)
+                    Text(
+                        text = "${strings.dueReviewsLabel}: $dueCount",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = OledColors.Amber,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        // Mastery by Technique
+        // Mastery Roadmap Header + Chapter Tabs
         Text(
             text = strings.masteryHeading,
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(top = 4.dp)
         )
 
-        val coreTechs = listOf(
-            "poly_factor",
-            "sqrt_conjugate",
-            "nth_root",
-            "add_sub_zero",
-            "trig",
-            "hybrid"
-        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = OledColors.Surface,
+            border = BorderStroke(1.dp, OledColors.Border)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                listOf(
+                    "limits" to strings.chapterLimits,
+                    "sequences" to strings.chapterSequences
+                ).forEach { (chapKey, chapLabel) ->
+                    val selected = roadmapChapter == chapKey
+                    val solvedCount = stats?.solvedByChapter?.get(chapKey) ?: 0
+                    val fullLabel = if (solvedCount > 0) "$chapLabel ($solvedCount)" else chapLabel
+                    Surface(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp)
+                            .clickable { roadmapChapter = chapKey },
+                        shape = RoundedCornerShape(9.dp),
+                        color = if (selected) OledColors.PrimarySoft else OledColors.SurfaceElevated,
+                        border = BorderStroke(1.dp, if (selected) OledColors.Primary else OledColors.Border)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = fullLabel,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (selected) Color(0xFF93C5FD) else OledColors.TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        val chapterTechs = LimitsCasEngine.techniquesForChapter(roadmapChapter)
         val masteryMap = stats?.masteryByTechnique?.associateBy { it.technique }.orEmpty()
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            coreTechs.forEach { tech ->
-                val item = masteryMap[tech] ?: TechniqueMastery(tech, 0.0, 0, 0)
+            chapterTechs.forEachIndexed { idx, tech ->
+                val item = masteryMap[tech] ?: TechniqueMastery(
+                    technique = tech,
+                    mastery = 0.0,
+                    correct = 0,
+                    attempts = 0,
+                    chapter = roadmapChapter,
+                    effectiveMastery = 0.0,
+                    isUnlocked = idx == 0,
+                    stage = idx + 1
+                )
                 TechniqueMasteryCard(
                     title = strings.techniques[tech] ?: tech,
                     item = item,
-                    practiceLabel = strings.practiceThisTech,
+                    strings = strings,
+                    isFocusLocked = isFocusLocked,
                     onPractice = { onPracticeTechnique(tech) }
                 )
             }
@@ -285,15 +395,16 @@ private fun KpiMiniTile(
         border = BorderStroke(1.dp, OledColors.Border)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = value,
-                fontSize = 22.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = accent
+                color = accent,
+                maxLines = 1
             )
             Text(
                 text = label,
@@ -310,7 +421,8 @@ private fun KpiMiniTile(
 private fun TechniqueMasteryCard(
     title: String,
     item: TechniqueMastery,
-    practiceLabel: String,
+    strings: AppStrings,
+    isFocusLocked: Boolean,
     onPractice: () -> Unit
 ) {
     val pct = item.percent
@@ -319,18 +431,21 @@ private fun TechniqueMasteryCard(
         animationSpec = tween(durationMillis = 600),
         label = "tech_mastery"
     )
+    val isLockedStage = !item.isUnlocked
     val barColor = when {
+        isLockedStage -> OledColors.TextMuted
         pct >= 75 -> OledColors.Green
         pct >= 45 -> OledColors.Primary
         item.attempts > 0 -> OledColors.Amber
         else -> OledColors.TextMuted
     }
+    val unlockHintText = item.unlockHint?.get(strings.langCode).orEmpty()
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         color = OledColors.Surface,
-        border = BorderStroke(1.dp, OledColors.Border)
+        border = BorderStroke(1.dp, if (isLockedStage) OledColors.Border else OledColors.BorderStrong)
     ) {
         Column(
             modifier = Modifier
@@ -343,18 +458,72 @@ private fun TechniqueMasteryCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            color = OledColors.SurfaceElevated,
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                text = "${strings.stageLabelPrefix} ${item.stage}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = OledColors.TextMuted,
+                                fontSize = 10.sp,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        if (isLockedStage) {
+                            Surface(
+                                color = OledColors.AmberSoft,
+                                shape = RoundedCornerShape(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Lock,
+                                        contentDescription = null,
+                                        tint = OledColors.Amber,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        text = strings.lockedSkillTag,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = OledColors.Amber,
+                                        fontSize = 10.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
+                        color = if (isLockedStage) OledColors.TextSecondary else OledColors.TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+
+                    val avgSuffix = item.avgTimeSec?.takeIf { it > 0 }?.let { "  •  ${it.roundToInt()}s" } ?: ""
                     Text(
-                        text = "${item.correct}/${item.attempts}  •  $pct%",
+                        text = "${item.correct}/${item.attempts}  •  $pct%$avgSuffix",
                         style = MaterialTheme.typography.bodySmall,
                         color = OledColors.TextSecondary
                     )
+                    if (isLockedStage && unlockHintText.isNotBlank()) {
+                        Text(
+                            text = unlockHintText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = OledColors.Amber,
+                            fontSize = 11.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(8.dp))
@@ -363,22 +532,22 @@ private fun TechniqueMasteryCard(
                     onClick = onPractice,
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.filledTonalButtonColors(
-                        containerColor = OledColors.PrimarySoft,
-                        contentColor = Color(0xFF93C5FD)
+                        containerColor = if (isFocusLocked) OledColors.SurfaceElevated else OledColors.PrimarySoft,
+                        contentColor = if (isFocusLocked) OledColors.Amber else Color(0xFF93C5FD)
                     ),
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     modifier = Modifier.height(34.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Rounded.PlayArrow,
+                        imageVector = if (isFocusLocked) Icons.Rounded.Lock else Icons.Rounded.PlayArrow,
                         contentDescription = null,
                         modifier = Modifier.size(15.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = practiceLabel,
+                        text = strings.practiceThisTech,
                         style = MaterialTheme.typography.labelMedium,
-                        color = Color(0xFF93C5FD)
+                        color = if (isFocusLocked) OledColors.Amber else Color(0xFF93C5FD)
                     )
                 }
             }

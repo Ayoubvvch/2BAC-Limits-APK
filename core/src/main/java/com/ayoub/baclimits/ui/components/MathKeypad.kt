@@ -47,9 +47,11 @@ fun MathKeypad(
     onClear: () -> Unit,
     onSubmit: () -> Unit,
     canSubmit: Boolean,
+    answerKind: String = "constant",
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
+    val isExprN = answerKind == "expression_n"
 
     fun triggerInsert(token: String, cursorBack: Int = 0) {
         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -68,35 +70,85 @@ fun MathKeypad(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                // Row 1: Roots, Infinities, Pi
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    PadKey("√()", KeyStyle.Function) { triggerInsert("√()", 1) }
-                    PadKey("∛()", KeyStyle.Function) { triggerInsert("∛()", 1) }
-                    PadKey("⁴√()", KeyStyle.Function) { triggerInsert("⁴√()", 1) }
-                    PadKey("+∞", KeyStyle.Function) { triggerInsert("+inf", 0) }
-                    PadKey("-∞", KeyStyle.Function) { triggerInsert("-inf", 0) }
-                    PadKey("π", KeyStyle.Function) { triggerInsert("π", 0) }
+                if (isExprN) {
+                    // Sequences expression_n primary strip: n, ^n, ln, e, e^(), π
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        PadKey("n", KeyStyle.Function, 35) { triggerInsert("n", 0) }
+                        PadKey("^n", KeyStyle.Function, 35) { triggerInsert("^n", 0) }
+                        PadKey("ln()", KeyStyle.Function, 35) { triggerInsert("ln()", 1) }
+                        PadKey("e", KeyStyle.Function, 35) { triggerInsert("e", 0) }
+                        PadKey("e^()", KeyStyle.Function, 35) { triggerInsert("e^()", 1) }
+                        PadKey("π", KeyStyle.Function, 35) { triggerInsert("π", 0) }
+                    }
+                    // Row 2: roots, infinities, parens
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        PadKey("√()", KeyStyle.Function, 35) { triggerInsert("√()", 1) }
+                        PadKey("∛()", KeyStyle.Function, 35) { triggerInsert("∛()", 1) }
+                        PadKey("+∞", KeyStyle.Function, 35) { triggerInsert("+inf", 0) }
+                        PadKey("-∞", KeyStyle.Function, 35) { triggerInsert("-inf", 0) }
+                        PadKey("(", KeyStyle.Operator, 35) { triggerInsert("(", 0) }
+                        PadKey(")", KeyStyle.Operator, 35) { triggerInsert(")", 0) }
+                    }
+                    // Row 3: trig, abs, powers
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        PadKey("sin", KeyStyle.Function, 35) { triggerInsert("sin()", 1) }
+                        PadKey("cos", KeyStyle.Function, 35) { triggerInsert("cos()", 1) }
+                        PadKey("tan", KeyStyle.Function, 35) { triggerInsert("tan()", 1) }
+                        PadKey("| |", KeyStyle.Function, 35) { triggerInsert("abs()", 1) }
+                        PadKey("^2", KeyStyle.Operator, 35) { triggerInsert("^2", 0) }
+                        PadKey("^", KeyStyle.Operator, 35) { triggerInsert("^", 0) }
+                    }
+                } else {
+                    // Constant limits Row 1: Roots, Infinities, Pi
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        PadKey("√()", KeyStyle.Function, 35) { triggerInsert("√()", 1) }
+                        PadKey("∛()", KeyStyle.Function, 35) { triggerInsert("∛()", 1) }
+                        PadKey("⁴√()", KeyStyle.Function, 35) { triggerInsert("⁴√()", 1) }
+                        PadKey("+∞", KeyStyle.Function, 35) { triggerInsert("+inf", 0) }
+                        PadKey("-∞", KeyStyle.Function, 35) { triggerInsert("-inf", 0) }
+                        PadKey("π", KeyStyle.Function, 35) { triggerInsert("π", 0) }
+                    }
+                    // Row 2: ln, e, e^(), parens, ^
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        PadKey("ln()", KeyStyle.Function, 35) { triggerInsert("ln()", 1) }
+                        PadKey("e", KeyStyle.Function, 35) { triggerInsert("e", 0) }
+                        PadKey("e^()", KeyStyle.Function, 35) { triggerInsert("e^()", 1) }
+                        PadKey("(", KeyStyle.Operator, 35) { triggerInsert("(", 0) }
+                        PadKey(")", KeyStyle.Operator, 35) { triggerInsert(")", 0) }
+                        PadKey("^", KeyStyle.Operator, 35) { triggerInsert("^", 0) }
+                    }
+                    // Row 3: Trig, abs, quick powers
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        PadKey("sin", KeyStyle.Function, 35) { triggerInsert("sin()", 1) }
+                        PadKey("cos", KeyStyle.Function, 35) { triggerInsert("cos()", 1) }
+                        PadKey("tan", KeyStyle.Function, 35) { triggerInsert("tan()", 1) }
+                        PadKey("| |", KeyStyle.Function, 35) { triggerInsert("abs()", 1) }
+                        PadKey("^2", KeyStyle.Operator, 35) { triggerInsert("^2", 0) }
+                        PadKey("^3", KeyStyle.Operator, 35) { triggerInsert("^3", 0) }
+                    }
                 }
 
-                // Row 2: Trig & grouping
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    PadKey("sin", KeyStyle.Function) { triggerInsert("sin()", 1) }
-                    PadKey("cos", KeyStyle.Function) { triggerInsert("cos()", 1) }
-                    PadKey("tan", KeyStyle.Function) { triggerInsert("tan()", 1) }
-                    PadKey("(", KeyStyle.Operator) { triggerInsert("(", 0) }
-                    PadKey(")", KeyStyle.Operator) { triggerInsert(")", 0) }
-                    PadKey("^", KeyStyle.Operator) { triggerInsert("^", 0) }
-                }
-
-                // Row 3: 7 8 9 ÷ × Backspace
+                // Row 4: 7 8 9 ÷ × Backspace
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -112,7 +164,7 @@ fun MathKeypad(
                     }
                 }
 
-                // Row 4: 4 5 6 + - Clear
+                // Row 5: 4 5 6 + - Clear
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -128,7 +180,7 @@ fun MathKeypad(
                     }
                 }
 
-                // Row 5: 1 2 3 0 . Submit
+                // Row 6: 1 2 3 0 . Submit
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -152,6 +204,7 @@ fun MathKeypad(
 private fun RowScope.PadKey(
     label: String,
     style: KeyStyle,
+    heightDp: Int = 42,
     onClick: () -> Unit
 ) {
     val (bg, fg, border) = when (style) {
@@ -167,7 +220,7 @@ private fun RowScope.PadKey(
         onClick = onClick,
         modifier = Modifier
             .weight(1f)
-            .height(42.dp),
+            .height(heightDp.dp),
         shape = RoundedCornerShape(11.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = bg,

@@ -399,8 +399,8 @@ def make_add_zero_brick(
         steps = [
             SolutionStep(
                 title=BilingualText(
-                    ar=f"إضافة وطرح العدد {target_L} (توليد الصفر)",
-                    fr=f"Ajout et retranchement de {target_L}",
+                    ar=rf"إضافة وطرح العدد ${target_L}$ (توليد الصفر)",
+                    fr=rf"Ajout et retranchement de ${target_L}$",
                 ),
                 explanation=BilingualText(
                     ar=(
@@ -599,7 +599,7 @@ def make_subst_root_brick(
             ),
         ),
         SolutionStep(
-            title=BilingualText(ar="الاختزال وحساب النسبة", fr="Simplification en t"),
+            title=BilingualText(ar="الاختزال وحساب النسبة", fr="Simplification en $t$"),
             explanation=BilingualText(
                 ar=f"نختزل بـ $(t - {t0})$ ونعوّض بـ $t = {t0}$.",
                 fr=f"On simplifie par $(t - {t0})$ puis on évalue en $t = {t0}$.",
@@ -641,8 +641,8 @@ def make_trig_brick(rng: random.Random, x0: int) -> VanishingBrick:
         steps = [
             SolutionStep(
                 title=BilingualText(
-                    ar=f"استعمال النهاية المثلثية لـ {fn_name}",
-                    fr=f"Limite trigonométrique usuelle ({fn_name})",
+                    ar=rf"استعمال النهاية المثلثية لـ $\{fn_name}$",
+                    fr=rf"Limite trigonométrique usuelle ($\{fn_name}$)",
                 ),
                 explanation=BilingualText(
                     ar=rf"نكتب $\frac{{\{fn_name}({arg_tex})}}{{x}} = {a} \cdot \frac{{\{fn_name}({arg_tex})}}{{{arg_tex}}}$ عند $x \to 0$:",
@@ -680,4 +680,206 @@ def make_trig_brick(rng: random.Random, x0: int) -> VanishingBrick:
         hint_fr=hint_fr,
         steps=steps,
         tags=["trig", fn_name, "shifted_point" if x0 != 0 else "at_zero"],
+    )
+
+
+def make_poly_order2_brick(
+    rng: random.Random,
+    x0: int,
+    coeff_bound: int = 3,
+) -> VanishingBrick:
+    """Build an expanded order-2 vanishing polynomial P(x) = (x - x0)^2 * Q(x) with Q(x0) != 0."""
+    q_deg = rng.choice([0, 1])
+    q_expr = _random_poly_nonzero_at(rng, x0, q_deg, coeff_bound=coeff_bound)
+    p_expr = sp.expand((X - sp.Integer(x0)) ** 2 * q_expr)
+    p_tex = poly_latex(p_expr)
+    q_tex = poly_latex(q_expr)
+    lin_tex = linear_factor_latex("x", x0)
+    lin_sq_tex = "x^2" if x0 == 0 else rf"({lin_tex})^2"
+    q_at_x0 = sp.simplify(q_expr.subs(X, x0))
+
+    factored_tex = (
+        lin_sq_tex
+        if q_expr == 1
+        else (f"-{lin_sq_tex}" if q_expr == -1 else rf"{lin_sq_tex}({q_tex})")
+    )
+    steps = [
+        SolutionStep(
+            title=BilingualText(
+                ar="تعميل الجذر المزدوج من الرتبة 2",
+                fr="Factorisation de la racine double (ordre 2)",
+            ),
+            explanation=BilingualText(
+                ar=f"الحدودية ${p_tex}$ تقبل ${x0}$ كجذر مزدوج، لذا نُعمّل بـ ${lin_sq_tex}$:",
+                fr=f"Le polynôme ${p_tex}$ admet ${x0}$ comme racine double ; on factorise par ${lin_sq_tex}$ :",
+            ),
+            latex=rf"{p_tex} = {factored_tex}, \quad \lim_{{x \to {x0}}} \frac{{{p_tex}}}{{{lin_sq_tex}}} = {value_latex(q_at_x0)}",
+        )
+    ]
+
+    return VanishingBrick(
+        x0=x0,
+        expr=p_expr,
+        latex=p_tex,
+        slope_limit=q_at_x0,
+        family="poly_factor",
+        sub_pattern="poly_order2",
+        hint_ar=f"عمّل الحدودية $({p_tex})$ بـ ${lin_sq_tex}$ (جذر مزدوج عند ${x0}$).",
+        hint_fr=f"Factorisez $({p_tex})$ par ${lin_sq_tex}$ (racine double en ${x0}$).",
+        steps=steps,
+        order=2,
+        tags=["double_root", "order_2"],
+    )
+
+
+def make_trig_order2_brick(
+    rng: random.Random,
+    x0: int,
+) -> VanishingBrick:
+    """Build an order-2 trigonometric vanishing brick: 1 - cos(a(x-x0)) or sin^2(a(x-x0))."""
+    variant = rng.choice(["one_minus_cos", "sin_sq"])
+    a = rng.choice([1, 2, 3, 4])
+    arg_expr = sp.expand(sp.Integer(a) * (X - sp.Integer(x0)))
+    arg_tex = poly_latex(arg_expr)
+    lin_tex = linear_factor_latex("x", x0)
+    lin_sq_tex = "x^2" if x0 == 0 else rf"({lin_tex})^2"
+
+    if variant == "one_minus_cos":
+        expr = 1 - sp.cos(arg_expr)
+        tex = rf"1 - \cos({arg_tex})"
+        slope = sp.Rational(a * a, 2)
+        hint_ar = rf"استعمل النهاية المثلثية من الرتبة 2: $\lim_{{t \to 0}} \frac{{1 - \cos(at)}}{{t^2}} = \frac{{a^2}}{{2}}$."
+        hint_fr = rf"Utilisez la limite usuelle d'ordre 2 : $\lim_{{t \to 0}} \frac{{1 - \cos(at)}}{{t^2}} = \frac{{a^2}}{{2}}$."
+        steps = [
+            SolutionStep(
+                title=BilingualText(
+                    ar="النهاية المثلثية من الرتبة 2 لـ $1 - \\cos$",
+                    fr="Limite trigonométrique d'ordre 2 ($1 - \\cos$)",
+                ),
+                explanation=BilingualText(
+                    ar=rf"بوضع $t = {lin_tex} \to 0$ واستعمال $\lim_{{t \to 0}} \frac{{1 - \cos({a}t)}}{{t^2}} = \frac{{{a}^2}}{{2}}$:",
+                    fr=rf"En posant $t = {lin_tex} \to 0$ et en utilisant $\lim_{{t \to 0}} \frac{{1 - \cos({a}t)}}{{t^2}} = \frac{{{a}^2}}{{2}}$ :",
+                ),
+                latex=rf"\lim_{{x \to {x0}}} \frac{{{tex}}}{{{lin_sq_tex}}} = {value_latex(slope)}",
+            )
+        ]
+    else:
+        expr = sp.sin(arg_expr) ** 2
+        tex = rf"\sin^2({arg_tex})"
+        slope = sp.Integer(a * a)
+        hint_ar = rf"استعمل $\lim_{{t \to 0}} \left(\frac{{\sin(at)}}{{t}}\right)^2 = a^2$."
+        hint_fr = rf"Utilisez $\lim_{{t \to 0}} \left(\frac{{\sin(at)}}{{t}}\right)^2 = a^2$."
+        steps = [
+            SolutionStep(
+                title=BilingualText(
+                    ar="النهاية المثلثية من الرتبة 2 لـ $\\sin^2$",
+                    fr="Limite trigonométrique d'ordre 2 ($\\sin^2$)",
+                ),
+                explanation=BilingualText(
+                    ar=rf"بوضع $t = {lin_tex} \to 0$ نكتب $\frac{{\sin^2({a}t)}}{{t^2}} = \left(\frac{{\sin({a}t)}}{{t}}\right)^2 \to {a}^2$:",
+                    fr=rf"En posant $t = {lin_tex} \to 0$, on a $\frac{{\sin^2({a}t)}}{{t^2}} = \left(\frac{{\sin({a}t)}}{{t}}\right)^2 \to {a}^2$ :",
+                ),
+                latex=rf"\lim_{{x \to {x0}}} \frac{{{tex}}}{{{lin_sq_tex}}} = {value_latex(slope)}",
+            )
+        ]
+
+    return VanishingBrick(
+        x0=x0,
+        expr=expr,
+        latex=tex,
+        slope_limit=slope,
+        family="trig",
+        sub_pattern=f"trig_order2_{variant}",
+        hint_ar=hint_ar,
+        hint_fr=hint_fr,
+        steps=steps,
+        order=2,
+        tags=["trig", "order_2", variant],
+    )
+
+
+def make_ln_brick(
+    rng: random.Random,
+    x0: int,
+    poly_deg: int = 1,
+) -> VanishingBrick:
+    """Build ln(P(x)) vanishing at x0 where P(x) = 1 + (x - x0)*R(x) and R(x0) != 0."""
+    p_expr, r_expr = _poly_with_value_at(rng, x0, 1, deg=poly_deg, coeff_bound=4)
+    p_tex = poly_latex(p_expr)
+    r_tex = poly_latex(r_expr)
+    lin_tex = linear_factor_latex("x", x0)
+    slope = sp.simplify(r_expr.subs(X, x0))
+
+    expr = sp.log(p_expr)
+    tex = rf"\ln({p_tex})"
+    u_expr = sp.expand((X - sp.Integer(x0)) * r_expr)
+    u_tex = poly_latex(u_expr)
+
+    steps = [
+        SolutionStep(
+            title=BilingualText(
+                ar=r"استعمال النهاية اللوغاريتمية $\lim_{u \to 0} \frac{\ln(1+u)}{u} = 1$",
+                fr=r"Limite usuelle logarithmique $\lim_{u \to 0} \frac{\ln(1+u)}{u} = 1$",
+            ),
+            explanation=BilingualText(
+                ar=rf"نكتب ${p_tex} = 1 + ({lin_tex})({r_tex})$. بوضع $u(x) = {u_tex} \to 0$ عند $x \to {x0}$:",
+                fr=rf"On écrit ${p_tex} = 1 + ({lin_tex})({r_tex})$. En posant $u(x) = {u_tex} \to 0$ lorsque $x \to {x0}$ :",
+            ),
+            latex=rf"\lim_{{x \to {x0}}} \frac{{{tex}}}{{{lin_tex}}} = \lim_{{x \to {x0}}} \frac{{\ln(1 + u(x))}}{{u(x)}} \cdot ({r_tex}) = {value_latex(slope)}",
+        )
+    ]
+
+    return VanishingBrick(
+        x0=x0,
+        expr=expr,
+        latex=tex,
+        slope_limit=slope,
+        family="ln_limits",
+        sub_pattern="ln_vanishing_brick",
+        hint_ar=rf"اكتب ${p_tex} = 1 + u(x)$ حيث $u({x0})=0$ ثم استعمل $\lim_{{u \to 0}} \frac{{\ln(1+u)}}{{u}} = 1$.",
+        hint_fr=rf"Écrivez ${p_tex} = 1 + u(x)$ avec $u({x0})=0$, puis utilisez $\lim_{{u \to 0}} \frac{{\ln(1+u)}}{{u}} = 1$.",
+        steps=steps,
+        tags=["ln", "taux_accroissement"],
+    )
+
+
+def make_exp_brick(
+    rng: random.Random,
+    x0: int,
+) -> VanishingBrick:
+    """Build e^(a*(x - x0)) - 1 vanishing at x0 with slope a."""
+    a = _nonzero_int(rng, -4, 4)
+    arg_expr = sp.expand(sp.Integer(a) * (X - sp.Integer(x0)))
+    arg_tex = poly_latex(arg_expr)
+    lin_tex = linear_factor_latex("x", x0)
+
+    expr = sp.exp(arg_expr) - sp.Integer(1)
+    tex = rf"e^{{{arg_tex}}} - 1"
+    slope = sp.Integer(a)
+
+    steps = [
+        SolutionStep(
+            title=BilingualText(
+                ar=r"استعمال النهاية الأسية $\lim_{u \to 0} \frac{e^u - 1}{u} = 1$",
+                fr=r"Limite usuelle exponentielle $\lim_{u \to 0} \frac{e^u - 1}{u} = 1$",
+            ),
+            explanation=BilingualText(
+                ar=rf"نضع $u = {arg_tex} = {a}({lin_tex}) \to 0$ عند $x \to {x0}$:",
+                fr=rf"On pose $u = {arg_tex} = {a}({lin_tex}) \to 0$ lorsque $x \to {x0}$ :",
+            ),
+            latex=rf"\lim_{{x \to {x0}}} \frac{{{tex}}}{{{lin_tex}}} = {a} \cdot \lim_{{u \to 0}} \frac{{e^u - 1}}{{u}} = {a}",
+        )
+    ]
+
+    return VanishingBrick(
+        x0=x0,
+        expr=expr,
+        latex=tex,
+        slope_limit=slope,
+        family="exp_limits",
+        sub_pattern="exp_vanishing_brick",
+        hint_ar=rf"ضع $u = {arg_tex} \to 0$ واستعمل النهاية الاعتيادية $\lim_{{u \to 0}} \frac{{e^u - 1}}{{u}} = 1$.",
+        hint_fr=rf"Posez $u = {arg_tex} \to 0$ et utilisez $\lim_{{u \to 0}} \frac{{e^u - 1}}{{u}} = 1$.",
+        steps=steps,
+        tags=["exp", "taux_accroissement"],
     )

@@ -1,5 +1,6 @@
 package com.ayoub.baclimits.data
 
+import com.ayoub.baclimits.math.EvalResult
 import com.ayoub.baclimits.math.ExpectedAnswer
 import com.ayoub.baclimits.math.GeneratedExercise
 import com.ayoub.baclimits.math.LimitsCasEngine
@@ -9,7 +10,9 @@ data class EvaluationResult(
     val isCorrect: Boolean,
     val messageAr: String,
     val messageFr: String,
-    val validSyntax: Boolean = true
+    val validSyntax: Boolean = true,
+    val studentLatex: String = "",
+    val expectedLatex: String = ""
 )
 
 interface OfflineLimitsEngine {
@@ -23,7 +26,8 @@ interface OfflineLimitsEngine {
         explicitSeed: String?,
         weakestTechnique: String? = null,
         suggestedDifficulty: Int = 1,
-        masteryJson: String? = null
+        masteryJson: String? = null,
+        chapter: String = "limits"
     ): GeneratedExercise
 
     fun isValidSeed(seed: String): Boolean
@@ -32,7 +36,8 @@ interface OfflineLimitsEngine {
         expectedAnswer: ExpectedAnswer,
         studentAnswer: String,
         expectedLatex: String? = null,
-        expectedSympyStr: String? = null
+        expectedSympyStr: String? = null,
+        answerKind: String = "constant"
     ): EvaluationResult
 }
 
@@ -47,14 +52,16 @@ object LiteKotlinLimitsEngine : OfflineLimitsEngine {
         explicitSeed: String?,
         weakestTechnique: String?,
         suggestedDifficulty: Int,
-        masteryJson: String?
+        masteryJson: String?,
+        chapter: String
     ): GeneratedExercise {
         return LimitsCasEngine.generate(
             requestedTechnique = requestedTechnique,
             requestedDifficulty = requestedDifficulty,
             explicitSeed = explicitSeed,
             weakestTechnique = weakestTechnique ?: "adaptive",
-            suggestedDifficulty = suggestedDifficulty
+            suggestedDifficulty = suggestedDifficulty,
+            chapter = chapter
         )
     }
 
@@ -64,25 +71,38 @@ object LiteKotlinLimitsEngine : OfflineLimitsEngine {
         expectedAnswer: ExpectedAnswer,
         studentAnswer: String,
         expectedLatex: String?,
-        expectedSympyStr: String?
+        expectedSympyStr: String?,
+        answerKind: String
     ): EvaluationResult {
-        val eval = MathExprEvaluator.evaluate(studentAnswer)
-        val isCorrect = MathExprEvaluator.isEquivalent(expectedAnswer, studentAnswer)
+        val syntaxEval = MathExprEvaluator.validateSyntax(studentAnswer, answerKind = answerKind)
+        val isCorrect = if (syntaxEval is EvalResult.Invalid) {
+            false
+        } else if (answerKind == "expression_n") {
+            MathExprEvaluator.isEquivalentExprN(expectedSympyStr ?: expectedLatex.orEmpty(), studentAnswer)
+        } else {
+            MathExprEvaluator.isEquivalent(expectedAnswer, studentAnswer)
+        }
 
+        val studentLatex = if (syntaxEval is EvalResult.Invalid) "" else LatexFormatter.asciiToPreviewLatex(studentAnswer)
         val msgAr: String
         val msgFr: String
         when {
             isCorrect -> {
-                msgAr = "أحسنت! إجابة صحيحة ومتطابقة رمزياً."
-                msgFr = "Bravo ! Réponse exacte et symboliquement équivalente."
+                msgAr = "أحسنت! إجابة صحيحة تماماً."
+                msgFr = "Bravo ! Votre réponse est exacte."
             }
-            eval is com.ayoub.baclimits.math.EvalResult.Invalid -> {
-                msgAr = "تعذر فهم الصيغة الرياضية (${eval.reason}). جرب مثالاً مثل: 1/2 أو sqrt(2)/2 أو +inf"
-                msgFr = "Expression invalide (${eval.reason}). Ex : 1/2, sqrt(2)/2 ou +inf"
+            syntaxEval is EvalResult.Invalid -> {
+                if (answerKind == "expression_n") {
+                    msgAr = "صيغة التعبير غير واضحة (${syntaxEval.reason}). أمثلة: `2 + 3*(1/2)^n` أو `(2^n - 1)/(2^n + 1)`."
+                    msgFr = "Format d'expression invalide (${syntaxEval.reason}). Ex : `2 + 3*(1/2)^n`."
+                } else {
+                    msgAr = "صيغة الإجابة غير واضحة (${syntaxEval.reason}). أمثلة: `1/2` أو `sqrt(3)/2` أو `ln(2)` أو `e^2` أو `+inf`."
+                    msgFr = "Format de réponse invalide (${syntaxEval.reason}). Ex : `1/2`, `ln(2)`, `e^2` ou `+inf`."
+                }
             }
             else -> {
-                msgAr = "إجابة غير صحيحة. استعمل زر التلميح أو راجع الإشارة والمعاملات ثم أعد المحاولة!"
-                msgFr = "Réponse incorrecte. Utilise un indice ou vérifie le signe et les coefficients !"
+                msgAr = "إجابة غير صحيحة. راجع التلميحات أو جرّب التحقق من الإشارات والمعاملات."
+                msgFr = "Réponse incorrecte. Consultez les indices ou vérifiez les signes et coefficients."
             }
         }
 
@@ -90,7 +110,9 @@ object LiteKotlinLimitsEngine : OfflineLimitsEngine {
             isCorrect = isCorrect,
             messageAr = msgAr,
             messageFr = msgFr,
-            validSyntax = eval !is com.ayoub.baclimits.math.EvalResult.Invalid
+            validSyntax = syntaxEval !is EvalResult.Invalid,
+            studentLatex = studentLatex,
+            expectedLatex = expectedLatex.orEmpty()
         )
     }
 }

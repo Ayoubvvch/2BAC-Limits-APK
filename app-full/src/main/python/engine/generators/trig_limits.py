@@ -318,7 +318,7 @@ def _build_basic_poly_trig_sum(rng: random.Random, seed: str) -> tuple[Generated
     ]
     steps = [
         SolutionStep(
-            title=BilingualText(ar="القسمة على x", fr="Factorisation et division par x"),
+            title=BilingualText(ar=r"القسمة على $x$", fr=r"Factorisation et division par $x$"),
             explanation=BilingualText(
                 ar=r"بالتعويض المباشر نجد $\frac{0}{0}$. نقسم كلاً من البسط والمقام على $x$:",
                 fr=r"La substitution en $0$ donne $\frac{0}{0}$. On divise numérateur et dénominateur par $x$ :",
@@ -355,8 +355,8 @@ def _order2_block(rng: random.Random, family: str) -> tuple[sp.Expr, str, sp.Exp
             1 - sp.cos(sp.Integer(a) * X),
             rf"1 - \cos({t})",
             sp.Rational(a * a, 2),
-            rf"\frac{{1 - \cos({t})}}{{x^2}} \to \frac{{{a*a}}}{{2}}",
-            rf"\frac{{1 - \cos({t})}}{{x^2}} \to \frac{{{a*a}}}{{2}}",
+            rf"$\frac{{1 - \cos({t})}}{{x^2}} \to \frac{{{a*a}}}{{2}}$",
+            rf"$\frac{{1 - \cos({t})}}{{x^2}} \to \frac{{{a*a}}}{{2}}$",
         )
     if family == "cos_minus_cos":
         a = rng.randint(1, 7)
@@ -366,8 +366,8 @@ def _order2_block(rng: random.Random, family: str) -> tuple[sp.Expr, str, sp.Exp
             sp.cos(sp.Integer(a) * X) - sp.cos(sp.Integer(b) * X),
             rf"\cos({ta}) - \cos({tb})",
             sp.Rational(b * b - a * a, 2),
-            rf"\text{{اكتب }} \cos({ta}) - \cos({tb}) = (1 - \cos({tb})) - (1 - \cos({ta}))",
-            rf"\text{{Écrire }} \cos({ta}) - \cos({tb}) = (1 - \cos({tb})) - (1 - \cos({ta}))",
+            rf"اكتب $\cos({ta}) - \cos({tb}) = (1 - \cos({tb})) - (1 - \cos({ta}))$",
+            rf"écrire $\cos({ta}) - \cos({tb}) = (1 - \cos({tb})) - (1 - \cos({ta}))$",
         )
     if family == "sin_sin":
         a = _nonzero_int(rng, -5, 5)
@@ -376,8 +376,8 @@ def _order2_block(rng: random.Random, family: str) -> tuple[sp.Expr, str, sp.Exp
             sp.sin(sp.Integer(a) * X) * sp.sin(sp.Integer(b) * X),
             rf"\sin({_lin_arg_tex(a)})\,\sin({_lin_arg_tex(b)})",
             sp.Integer(a * b),
-            rf"\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\sin({_lin_arg_tex(b)})}}{{x}} \to {a*b}",
-            rf"\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\sin({_lin_arg_tex(b)})}}{{x}} \to {a*b}",
+            rf"$\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\sin({_lin_arg_tex(b)})}}{{x}} \to {a*b}$",
+            rf"$\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\sin({_lin_arg_tex(b)})}}{{x}} \to {a*b}$",
         )
     if family == "sin_tan":
         a = _nonzero_int(rng, -5, 5)
@@ -386,8 +386,8 @@ def _order2_block(rng: random.Random, family: str) -> tuple[sp.Expr, str, sp.Exp
             sp.sin(sp.Integer(a) * X) * sp.tan(sp.Integer(b) * X),
             rf"\sin({_lin_arg_tex(a)})\,\tan({_lin_arg_tex(b)})",
             sp.Integer(a * b),
-            rf"\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\tan({_lin_arg_tex(b)})}}{{x}} \to {a*b}",
-            rf"\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\tan({_lin_arg_tex(b)})}}{{x}} \to {a*b}",
+            rf"$\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\tan({_lin_arg_tex(b)})}}{{x}} \to {a*b}$",
+            rf"$\frac{{\sin({_lin_arg_tex(a)})}}{{x}}\cdot\frac{{\tan({_lin_arg_tex(b)})}}{{x}} \to {a*b}$",
         )
     if family == "x_tan":
         k = _nonzero_int(rng, -5, 5)
@@ -397,8 +397,8 @@ def _order2_block(rng: random.Random, family: str) -> tuple[sp.Expr, str, sp.Exp
             sp.Integer(k) * X * sp.tan(sp.Integer(a) * X),
             _coeff_var_tex(k, t, True),
             sp.Integer(k * a),
-            rf"\frac{{{_coeff_var_tex(k, t, True)}}}{{x^2}} \to {k*a}",
-            rf"\frac{{{_coeff_var_tex(k, t, True)}}}{{x^2}} \to {k*a}",
+            rf"$\frac{{{_coeff_var_tex(k, t, True)}}}{{x^2}} \to {k*a}$",
+            rf"$\frac{{{_coeff_var_tex(k, t, True)}}}{{x^2}} \to {k*a}$",
         )
     # "kx2"
     k = _nonzero_int(rng, -6, 6)
@@ -406,8 +406,8 @@ def _order2_block(rng: random.Random, family: str) -> tuple[sp.Expr, str, sp.Exp
         sp.Integer(k) * (X**2),
         _coeff_var_tex(k, "x^{2}", True),
         sp.Integer(k),
-        rf"\text{{المعامل }} {k}",
-        rf"\text{{coefficient }} {k}",
+        rf"المعامل ${k}$",
+        rf"le coefficient ${k}$",
     )
 
 
@@ -434,13 +434,13 @@ def _build_inter_order2_combo(rng: random.Random, seed: str) -> tuple[GeneratedE
             fr=r"Numérateur et dénominateur s'annulent à l'ordre 2 en $0$. Divisez par $x^2$.",
         ),
         BilingualText(
-            ar=rf"استفد من: ${h_ar_n}$ وكذلك ${h_ar_d}$.",
-            fr=rf"Utilisez : ${h_fr_n}$ et ${h_fr_d}$.",
+            ar=rf"استفد من: {h_ar_n} وكذلك {h_ar_d}.",
+            fr=rf"Utilisez : {h_fr_n} et {h_fr_d}.",
         ),
     ]
     steps = [
         SolutionStep(
-            title=BilingualText(ar="القسمة على x²", fr="Division par x²"),
+            title=BilingualText(ar=r"القسمة على $x^2$", fr=r"Division par $x^2$"),
             explanation=BilingualText(
                 ar=r"نحصل بالتعويض في $0$ على $\frac{0}{0}$. نقسم البسط والمقام معاً على $x^2$:",
                 fr=r"En $0$, on a une FI $\frac{0}{0}$. On divise numérateur et dénominateur par $x^2$ :",
@@ -598,7 +598,7 @@ def _build_inter_squeeze_or_recip(rng: random.Random, seed: str) -> tuple[Genera
         ]
         steps = [
             SolutionStep(
-                title=BilingualText(ar="التأطير حول 0", fr="Encadrement au voisinage de 0"),
+                title=BilingualText(ar=r"التأطير حول $0$", fr=r"Encadrement au voisinage de $0$"),
                 explanation=BilingualText(
                     ar=rf"لكل $x \neq 0$ لدينا $\left|\{fn}\left({frac_arg}\right)\right| \le 1$، وبالتالي:",
                     fr=rf"Pour tout $x \neq 0$, $\left|\{fn}\left({frac_arg}\right)\right| \le 1$, donc :",
@@ -656,7 +656,7 @@ def _build_inter_squeeze_or_recip(rng: random.Random, seed: str) -> tuple[Genera
     ]
     steps = [
         SolutionStep(
-            title=BilingualText(ar="تغيير المتغير t = 1/x", fr="Changement de variable t = 1/x"),
+            title=BilingualText(ar=r"تغيير المتغير $t = \frac{1}{x}$", fr=r"Changement de variable $t = \frac{1}{x}$"),
             explanation=BilingualText(
                 ar=rf"نضع $t = \frac{{1}}{{x}}$؛ عند $x \to {point.point_latex()}$ لدينا $t \to 0$ وتصبح العبارة:",
                 fr=rf"On pose $t = \frac{{1}}{{x}}$ ; quand $x \to {point.point_latex()}$, $t \to 0$ et l'expression devient :",
@@ -664,7 +664,7 @@ def _build_inter_squeeze_or_recip(rng: random.Random, seed: str) -> tuple[Genera
             latex=rf"{expr_tex} = {t_tex}",
         ),
         SolutionStep(
-            title=BilingualText(ar="حساب النهاية عند t -> 0", fr="Calcul de la limite en t -> 0"),
+            title=BilingualText(ar=r"حساب النهاية عند $t \to 0$", fr=r"Calcul de la limite en $t \to 0$"),
             explanation=BilingualText(
                 ar=r"بتطبيق النهاية الاعتيادية عند $t \to 0$:",
                 fr=r"En appliquant la limite usuelle lorsque $t \to 0$ :",
@@ -771,7 +771,7 @@ def _build_inter_shift_pi_or_x0(rng: random.Random, seed: str) -> tuple[Generate
         sign_str = "-" if (k % 2 == 1) else ""
         steps = [
             SolutionStep(
-                title=BilingualText(ar="تغيير المتغير t = x - π", fr="Changement de variable t = x - π"),
+                title=BilingualText(ar=r"تغيير المتغير $t = x - \pi$", fr=r"Changement de variable $t = x - \pi$"),
                 explanation=BilingualText(
                     ar=rf"بوضع $t = x - \pi \to 0$ لدينا ${den_tex} = {a}t$ و $\sin({k}(\pi + t)) = {sign_str}\sin({k}t)$.",
                     fr=rf"En posant $t = x - \pi \to 0$, on a ${den_tex} = {a}t$ et $\sin({k}(\pi + t)) = {sign_str}\sin({k}t)$.",
@@ -829,7 +829,7 @@ def _build_inter_shift_pi_or_x0(rng: random.Random, seed: str) -> tuple[Generate
     ]
     steps = [
         SolutionStep(
-            title=BilingualText(ar="تغيير المتغير عند π/2", fr="Changement de variable en π/2"),
+            title=BilingualText(ar=r"تغيير المتغير عند $\frac{\pi}{2}$", fr=r"Changement de variable en $\frac{\pi}{2}$"),
             explanation=BilingualText(
                 ar=r"نضع $t = x - \frac{\pi}{2} \to 0$ ونستعمل $\cos\left(k\left(\frac{\pi}{2}+t\right)\right) = -\sin\left(\frac{k\pi}{2}\right)\sin(kt)$.",
                 fr=r"On pose $t = x - \frac{\pi}{2} \to 0$ et on utilise $\cos\left(k\left(\frac{\pi}{2}+t\right)\right) = -\sin\left(\frac{k\pi}{2}\right)\sin(kt)$.",
@@ -913,7 +913,7 @@ def _build_challenge_tan_minus_sin(rng: random.Random, seed: str) -> tuple[Gener
             latex=rf"\tan({a_tex}) - \sin({a_tex}) = \tan({a_tex})\left(1 - \cos({a_tex})\right)",
         ),
         SolutionStep(
-            title=BilingualText(ar="القسمة على x³ والمرور للنهاية", fr="Division par x³ et conclusion"),
+            title=BilingualText(ar=r"القسمة على $x^3$ والمرور للنهاية", fr=r"Division par $x^3$ et conclusion"),
             explanation=BilingualText(
                 ar=rf"لدينا $\lim_{{x\to 0}}\frac{{\tan({a_tex})(1 - \cos({a_tex}))}}{{x^3}} = {a}\cdot\frac{{{a}^2}}{{2}} = {value_latex(c3_num)}$، وبالتالي:",
                 fr=rf"Comme $\lim_{{x\to 0}}\frac{{\tan({a_tex})(1 - \cos({a_tex}))}}{{x^3}} = {value_latex(c3_num)}$, on conclut :",
@@ -981,7 +981,7 @@ def _build_challenge_sqrt_one_minus_cos(rng: random.Random, seed: str) -> tuple[
             latex=rf"{num_tex} = \sqrt{{2}}\left|\sin\left({half_arg}\right)\right| = {abs_sign}\sqrt{{2}}\sin\left({half_arg}\right)",
         ),
         SolutionStep(
-            title=BilingualText(ar="القسمة على x وحساب النهاية", fr="Division par x et conclusion"),
+            title=BilingualText(ar=r"القسمة على $x$ وحساب النهاية", fr=r"Division par $x$ et conclusion"),
             explanation=BilingualText(
                 ar=r"نقسم البسط والمقام على $x$ ونستعمل $\lim_{x\to 0}\frac{\sin(kx)}{x} = k$:",
                 fr=r"En divisant numérateur et dénominateur par $x$ :",
@@ -1025,7 +1025,7 @@ def _build_challenge_trig_radical_or_pi_cos(rng: random.Random, seed: str) -> tu
         ]
         steps = [
             SolutionStep(
-                title=BilingualText(ar="تغيير المتغير t = √x", fr="Changement de variable t = √x"),
+                title=BilingualText(ar=r"تغيير المتغير $t = \sqrt{x}$", fr=r"Changement de variable $t = \sqrt{x}$"),
                 explanation=BilingualText(
                     ar=r"بوضع $t = \sqrt{x}$ لدينا $x = t^2$ وعند $x \to 0^+$ يؤول $t \to 0^+$:",
                     fr=r"En posant $t = \sqrt{x}$, on a $x = t^2$ et $t \to 0^+$ :",
@@ -1078,7 +1078,7 @@ def _build_challenge_trig_radical_or_pi_cos(rng: random.Random, seed: str) -> tu
         ]
         steps = [
             SolutionStep(
-                title=BilingualText(ar="تغيير المتغير واستغلال الدورية", fr="Changement de variable et parité en π"),
+                title=BilingualText(ar="تغيير المتغير واستغلال الدورية", fr=r"Changement de variable et parité en $\pi$"),
                 explanation=BilingualText(
                     ar=rf"بوضع $t = {lin_tex} \to 0$ وبما أن ${x0}$ فردي، $\cos(\pi({x0} + t)) = \cos({x0}\pi + \pi t) = -\cos(\pi t)$.",
                     fr=rf"Avec $t = {lin_tex} \to 0$, comme ${x0}$ est impair, $\cos(\pi({x0}+t)) = -\cos(\pi t)$.",
@@ -1242,7 +1242,7 @@ def _build_challenge_special_angles(rng: random.Random, seed: str) -> tuple[Gene
     ]
     steps = [
         SolutionStep(
-            title=BilingualText(ar=f"تغيير المتغير عند الزاوية {pt_tex}", fr=f"Changement de variable en {pt_tex}"),
+            title=BilingualText(ar=rf"تغيير المتغير عند الزاوية ${pt_tex}$", fr=rf"Changement de variable en ${pt_tex}$"),
             explanation=BilingualText(
                 ar=rf"نستعمل صيغ الجمع المثلثية: {id_ar}.",
                 fr=rf"À l'aide des formules d'addition : {id_fr}.",

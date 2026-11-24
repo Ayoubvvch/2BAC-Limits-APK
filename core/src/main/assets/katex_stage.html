@@ -123,6 +123,17 @@
     .step-math-scroll .katex {
       font-size: 1.05em;
     }
+    #prose-root {
+      display: none;
+      width: 100%;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #e2e8f0;
+      word-wrap: break-word;
+    }
+    #prose-root .katex {
+      font-size: 1.05em;
+    }
   </style>
 </head>
 <body>
@@ -132,6 +143,7 @@
     </div>
   </div>
   <div id="doc-root"></div>
+  <div id="prose-root"></div>
 
   <script>
     (function () {
@@ -193,12 +205,13 @@
         var wrap = document.getElementById("stage-wrap");
         var inner = document.getElementById("stage-inner");
         var res = fitBox(scroller, wrap, inner, lastFormula.minScale, lastFormula.centerWhenFits, resetScroll);
-        if (res) notifyMetrics(res.height, res.overflows);
+        if (res) notifyMetrics(res.height + 4, res.overflows);
       }
 
       window.renderFormula = function (latex, displayMode, fontPx, minScale, centerWhenFits) {
         mode = "formula";
         document.getElementById("doc-root").style.display = "none";
+        document.getElementById("prose-root").style.display = "none";
         document.getElementById("scroller").style.display = "block";
 
         var inner = document.getElementById("stage-inner");
@@ -263,6 +276,7 @@
         mode = "doc";
         lastDocPayload = payload;
         document.getElementById("scroller").style.display = "none";
+        document.getElementById("prose-root").style.display = "none";
         var root = document.getElementById("doc-root");
         root.style.display = "block";
         root.innerHTML = "";
@@ -333,12 +347,34 @@
         });
       };
 
+      function relayoutProse() {
+        var el = document.getElementById("prose-root");
+        notifyMetrics(el.scrollHeight + 2, false);
+      }
+
+      window.renderProse = function (text, dir, fontPx, colorHex) {
+        mode = "prose";
+        document.getElementById("scroller").style.display = "none";
+        document.getElementById("doc-root").style.display = "none";
+        var el = document.getElementById("prose-root");
+        el.style.display = "block";
+        el.dir = (dir === "ltr") ? "ltr" : "rtl";
+        el.style.fontSize = (fontPx || 14) + "px";
+        if (colorHex) el.style.color = colorHex;
+        renderMixedProse(el, text || "");
+        requestAnimationFrame(function () {
+          relayoutProse();
+          setTimeout(relayoutProse, 60);
+        });
+      };
+
       function onContainerChange() {
         var w = document.documentElement.clientWidth;
         if (w <= 0) return;
         lastObservedWidth = w;
         if (mode === "formula") relayoutFormula(false);
-        else relayoutDoc();
+        else if (mode === "doc") relayoutDoc();
+        else relayoutProse();
       }
 
       window.addEventListener("resize", onContainerChange);
@@ -356,7 +392,8 @@
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(function () {
           if (mode === "formula") relayoutFormula(false);
-          else relayoutDoc();
+          else if (mode === "doc") relayoutDoc();
+          else relayoutProse();
         });
       }
     })();

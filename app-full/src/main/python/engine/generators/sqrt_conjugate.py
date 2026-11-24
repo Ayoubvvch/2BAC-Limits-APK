@@ -186,7 +186,7 @@ def _build_inf_sqrt_sqrt(rng: random.Random, seed: str, difficulty: Difficulty) 
             latex=rf"{full_tex} = \frac{{{poly_latex(diff_poly)}}}{{{conj_tex}}}",
         ),
         SolutionStep(
-            title=BilingualText(ar="التعميل بـ |x| وحساب النهاية", fr="Factorisation par |x|"),
+            title=BilingualText(ar=r"التعميل بـ $|x|$ وحساب النهاية", fr=r"Factorisation par $|x|$"),
             explanation=BilingualText(
                 ar=f"بإخراج $|x| = {'x' if inf_kind == '+oo' else '-x'}$ من المقام ثم الاختزال بـ $x$:",
                 fr=f"En factorisant le dénominateur par $|x| = {'x' if inf_kind == '+oo' else '-x'}$ puis en simplifiant par $x$ :",
@@ -251,7 +251,7 @@ def _build_inf_nested_sqrt(rng: random.Random, seed: str, difficulty: Difficulty
             latex=rf"{full_tex} = \frac{{{diff_tex}}}{{{conj_tex}}}",
         ),
         SolutionStep(
-            title=BilingualText(ar=r"التعميل بـ \sqrt{x}", fr=r"Factorisation par \sqrt{x}"),
+            title=BilingualText(ar=r"التعميل بـ $\sqrt{x}$", fr=r"Factorisation par $\sqrt{x}$"),
             explanation=BilingualText(
                 ar=r"نُعمّل البسط والمقام بـ $\sqrt{x}$ ونختزل:",
                 fr=r"On factorise le numérateur et le dénominateur par $\sqrt{x}$ et on simplifie :",

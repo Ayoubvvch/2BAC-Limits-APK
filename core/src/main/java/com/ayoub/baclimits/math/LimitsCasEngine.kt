@@ -21,7 +21,13 @@ data class GeneratedExercise(
     val answerLatex: String,
     val expectedAnswer: ExpectedAnswer,
     val steps: List<SolutionStep>,
-    val answerSympyStr: String? = null
+    val answerSympyStr: String? = null,
+    val chapter: String = LimitsCasEngine.chapterOfTechnique(technique),
+    val answerKind: String = "constant",
+    val prompt: LocalizedText = LocalizedText(
+        ar = "احسب النهاية التالية:",
+        fr = "Calculer la limite suivante :"
+    )
 )
 
 private class SplitMix64(seed: Long) {
@@ -95,25 +101,50 @@ private data class Rational(val num: Long, val den: Long) {
 
 object LimitsCasEngine {
 
-    val CORE_TECHNIQUES = listOf(
+    val LIMITS_TECHNIQUES = listOf(
         "poly_factor",
         "sqrt_conjugate",
-        "nth_root",
-        "add_sub_zero",
         "trig",
+        "nth_root",
+        "ln_limits",
+        "exp_limits",
+        "add_sub_zero",
         "hybrid"
     )
+
+    val SEQUENCES_TECHNIQUES = listOf(
+        "seq_limits",
+        "seq_arith_geo",
+        "seq_fixed_point",
+        "seq_homographic"
+    )
+
+    val CORE_TECHNIQUES = LIMITS_TECHNIQUES + SEQUENCES_TECHNIQUES
+
+    fun chapterOfTechnique(technique: String): String =
+        if (technique in SEQUENCES_TECHNIQUES) "sequences" else "limits"
+
+    fun techniquesForChapter(chapter: String): List<String> =
+        if (chapter == "sequences") SEQUENCES_TECHNIQUES else LIMITS_TECHNIQUES
 
     private val TECH_TO_CODE = mapOf(
         "poly_factor" to "POLY",
         "sqrt_conjugate" to "SQRT",
-        "nth_root" to "NROT",
-        "add_sub_zero" to "ADD0",
         "trig" to "TRIG",
-        "hybrid" to "HYBR"
+        "nth_root" to "NTHR",
+        "ln_limits" to "LNLM",
+        "exp_limits" to "EXPL",
+        "add_sub_zero" to "ADD0",
+        "hybrid" to "HYBR",
+        "seq_limits" to "SQLM",
+        "seq_arith_geo" to "SQAG",
+        "seq_fixed_point" to "SQFP",
+        "seq_homographic" to "SQHM"
     )
 
-    private val CODE_TO_TECH = TECH_TO_CODE.entries.associate { (k, v) -> v to k }
+    private val CODE_TO_TECH = TECH_TO_CODE.entries.associate { (k, v) -> v to k } + mapOf(
+        "NROT" to "nth_root" // Legacy v1.0/v1.1 Kotlin seed compatibility
+    )
 
     private val SEED_REGEX = Regex("^2BAC-([A-Z0-9]{4})-L([123])-([0-9A-F]{8})$")
 
@@ -139,15 +170,17 @@ object LimitsCasEngine {
         requestedDifficulty: Int,
         explicitSeed: String? = null,
         weakestTechnique: String? = null,
-        suggestedDifficulty: Int = 2
+        suggestedDifficulty: Int = 2,
+        chapter: String = "limits"
     ): GeneratedExercise {
         val (tech, diff, seedVal) = if (!explicitSeed.isNullOrBlank()) {
             parseSeed(explicitSeed)
         } else {
+            val chapterPool = techniquesForChapter(chapter)
             val chosenTech = when {
                 requestedTechnique in CORE_TECHNIQUES -> requestedTechnique
-                weakestTechnique in CORE_TECHNIQUES -> weakestTechnique!!
-                else -> CORE_TECHNIQUES[Random.nextInt(CORE_TECHNIQUES.size)]
+                weakestTechnique in chapterPool -> weakestTechnique!!
+                else -> chapterPool[Random.nextInt(chapterPool.size)]
             }
             val chosenDiff = if (requestedDifficulty in 1..3) {
                 requestedDifficulty
@@ -167,9 +200,15 @@ object LimitsCasEngine {
             "poly_factor" -> genPolyFactor(formattedSeed, diff, rng)
             "sqrt_conjugate" -> genSqrtConjugate(formattedSeed, diff, rng)
             "nth_root" -> genNthRoot(formattedSeed, diff, rng)
+            "ln_limits" -> NewChaptersCasGenerators.genLnLimits(formattedSeed, diff, rng)
+            "exp_limits" -> NewChaptersCasGenerators.genExpLimits(formattedSeed, diff, rng)
             "add_sub_zero" -> genAddSubZero(formattedSeed, diff, rng)
             "trig" -> genTrig(formattedSeed, diff, rng)
             "hybrid" -> genHybrid(formattedSeed, diff, rng)
+            "seq_limits" -> NewChaptersCasGenerators.genSeqLimits(formattedSeed, diff, rng)
+            "seq_arith_geo" -> NewChaptersCasGenerators.genSeqArithGeo(formattedSeed, diff, rng)
+            "seq_fixed_point" -> NewChaptersCasGenerators.genSeqFixedPoint(formattedSeed, diff, rng)
+            "seq_homographic" -> NewChaptersCasGenerators.genSeqHomographic(formattedSeed, diff, rng)
             else -> genPolyFactor(formattedSeed, diff, rng)
         }
     }

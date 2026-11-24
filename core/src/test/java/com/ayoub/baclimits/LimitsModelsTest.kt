@@ -13,9 +13,19 @@ import org.junit.Test
 class LimitsModelsTest {
 
     @Test
-    fun `parseApiError handles string and FastAPI validation detail arrays`() {
+    fun `parseApiError handles string object detail and FastAPI validation detail arrays`() {
         val strErr = JSONObject().put("detail", "Username invalid").toString()
         assertEquals("Username invalid", LimitsJsonParser.parseApiError(strErr, 422))
+
+        val objErr = JSONObject().put(
+            "detail",
+            JSONObject()
+                .put("code", "ACTIVE_EXERCISE_LOCKED")
+                .put("ar", "أكمل التمرين الحالي أولاً")
+                .put("fr", "Terminez d'abord l'exercice actif")
+        ).toString()
+        assertEquals("أكمل التمرين الحالي أولاً", LimitsJsonParser.parseApiError(objErr, 409, "ar"))
+        assertEquals("Terminez d'abord l'exercice actif", LimitsJsonParser.parseApiError(objErr, 409, "fr"))
 
         val arrErr = JSONObject().put(
             "detail",
@@ -112,9 +122,56 @@ class LimitsModelsTest {
     }
 
     @Test
-    fun `historyEntry infers technique and difficulty from seed code`() {
+    fun `historyEntry infers technique chapter and difficulty from seed codes safely`() {
         val h = HistoryEntry(seed = "2BAC-HYBR-L3-ABCDEF1234", isCorrect = false, fullLimitLatex = "")
         assertEquals("hybrid", h.technique)
+        assertEquals("limits", h.resolvedChapter)
         assertEquals(3, h.difficulty)
+
+        val hLn = HistoryEntry(seed = "2BAC-LNLM-L2-ABCDEF1234", isCorrect = true, fullLimitLatex = "")
+        assertEquals("ln_limits", hLn.technique)
+        assertEquals("limits", hLn.resolvedChapter)
+
+        val hSeq = HistoryEntry(seed = "2BAC-SQAG-L2-ABCDEF1234", isCorrect = null, fullLimitLatex = "")
+        assertEquals("seq_arith_geo", hSeq.technique)
+        assertEquals("sequences", hSeq.resolvedChapter)
+
+        val hNthr = HistoryEntry(seed = "2BAC-NTHR-L2-ABCDEF1234", isCorrect = true, fullLimitLatex = "")
+        val hNrot = HistoryEntry(seed = "2BAC-NROT-L2-ABCDEF1234", isCorrect = true, fullLimitLatex = "")
+        assertEquals("nth_root", hNthr.technique)
+        assertEquals("nth_root", hNrot.technique)
+    }
+
+    @Test
+    fun `parseExercise parses unrevealed Start Gate timer coach and avoids null strings`() {
+        val raw = JSONObject().apply {
+            put("seed", "2BAC-SQAG-L2-11223344AA")
+            put("chapter", "sequences")
+            put("technique", "seq_arith_geo")
+            put("difficulty", 2)
+            put("answer_kind", "expression_n")
+            put("is_revealed", false)
+            put("is_completed", false)
+            put("full_limit_latex", JSONObject.NULL)
+            put("prompt", JSONObject.NULL)
+            put("total_hints", 2)
+            put("timer", JSONObject().put("state", "ready").put("elapsed_sec", 0.0).put("target_fast_sec", 55))
+            put(
+                "coach",
+                JSONObject().put("mode", "unlock_next").put(
+                    "reason",
+                    JSONObject().put("ar", "مرحلة جديدة").put("fr", "Nouvelle étape")
+                )
+            )
+        }
+        val ex = LimitsJsonParser.parseExercise(raw)
+        assertEquals("sequences", ex.chapter)
+        assertEquals("expression_n", ex.answerKind)
+        assertFalse(ex.isRevealed)
+        assertEquals("", ex.fullLimitLatex)
+        assertNull(ex.prompt)
+        assertEquals("ready", ex.timer.state)
+        assertEquals(55, ex.timer.targetFastSec)
+        assertEquals("unlock_next", ex.coach?.mode)
     }
 }

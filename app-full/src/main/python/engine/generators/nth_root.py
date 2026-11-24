@@ -113,7 +113,7 @@ def _build_nth_inf_cube(rng: random.Random, seed: str, difficulty: Difficulty) -
             latex=rf"{full_tex} = \frac{{{poly_latex(diff_poly)}}}{{{conj_tex}}}",
         ),
         SolutionStep(
-            title=BilingualText(ar="التعميل بـ x² وحساب النهاية", fr="Factorisation par x² et calcul final"),
+            title=BilingualText(ar=r"التعميل بـ $x^2$ وحساب النهاية", fr=r"Factorisation par $x^2$ et calcul final"),
             explanation=BilingualText(
                 ar="بما أن الجذر التكعيبي يوافق $ax$ في كلا اللانهايتين (دون قيمة مطلقة)، نُعمّل البسط والمقام بـ $x^2$:",
                 fr="Comme la racine cubique se comporte comme $ax$ aux deux infinis, on factorise par $x^2$ :",

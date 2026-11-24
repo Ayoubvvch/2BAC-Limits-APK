@@ -25,6 +25,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -50,6 +51,7 @@ import com.ayoub.baclimits.ui.HistoryFilter
 import com.ayoub.baclimits.ui.components.KaTeXFormulaView
 import com.ayoub.baclimits.ui.i18n.AppStrings
 import com.ayoub.baclimits.ui.theme.OledColors
+import kotlin.math.roundToInt
 
 @Composable
 fun HistoryScreen(
@@ -187,16 +189,19 @@ private fun HistoryItemCard(
         null -> Triple(strings.statusPending, OledColors.Amber, OledColors.AmberSoft)
     }
 
-    // Resolve mathematical limit LaTeX: use stored fullLimitLatex or regenerate from seed
-    val effectiveLatex = remember(entry.seed, entry.fullLimitLatex) {
-        if (entry.fullLimitLatex.isNotBlank()) {
+    // Never reveal or regenerate math formulas for exercises still behind the Start Gate!
+    val effectiveLatex = remember(entry.seed, entry.fullLimitLatex, entry.isRevealed) {
+        if (!entry.isRevealed) {
+            ""
+        } else if (entry.fullLimitLatex.isNotBlank()) {
             entry.fullLimitLatex
         } else {
             try {
                 LimitsCasEngine.generate(
                     requestedTechnique = entry.technique,
-                    requestedDifficulty = 1,
-                    explicitSeed = entry.seed
+                    requestedDifficulty = entry.difficulty,
+                    explicitSeed = entry.seed,
+                    chapter = entry.resolvedChapter
                 ).fullLimitLatex
             } catch (_: Exception) {
                 ""
@@ -264,6 +269,36 @@ private fun HistoryItemCard(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                             )
                         }
+                        if (entry.elapsedSec > 0.0) {
+                            Surface(
+                                color = OledColors.SurfaceElevated,
+                                shape = RoundedCornerShape(99.dp)
+                            ) {
+                                Text(
+                                    text = "${entry.elapsedSec.roundToInt()}s",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = OledColors.Teal,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+                        val fluCode = entry.fluencyCode
+                        if (!fluCode.isNullOrBlank()) {
+                            val fluText = strings.fluencyLabels[fluCode] ?: fluCode
+                            Surface(
+                                color = OledColors.PrimarySoft,
+                                shape = RoundedCornerShape(99.dp)
+                            ) {
+                                Text(
+                                    text = fluText,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color(0xFF93C5FD),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.width(6.dp))
@@ -276,14 +311,34 @@ private fun HistoryItemCard(
                     )
                 }
 
-                // Mathematical limit rendered with KaTeX (No bare math!)
+                // Mathematical formula rendered with KaTeX (or protected lock state if not revealed yet)
                 Surface(
                     color = OledColors.Background,
                     shape = RoundedCornerShape(10.dp),
                     border = BorderStroke(1.dp, OledColors.Border),
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    if (effectiveLatex.isNotBlank()) {
+                    if (!entry.isRevealed) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Lock,
+                                contentDescription = null,
+                                tint = OledColors.Amber,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = strings.hiddenHistoryLabel,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = OledColors.TextSecondary
+                            )
+                        }
+                    } else if (effectiveLatex.isNotBlank()) {
                         KaTeXFormulaView(
                             latex = effectiveLatex,
                             displayMode = true,

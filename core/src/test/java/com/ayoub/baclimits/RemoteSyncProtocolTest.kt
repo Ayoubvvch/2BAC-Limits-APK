@@ -44,17 +44,25 @@ class RemoteSyncProtocolTest {
     }
 
     @Test
-    fun `distinguishes 10-hex backend seeds from 8-hex local Kotlin CAS seeds`() {
+    fun `distinguishes 10-hex backend seeds from 8-hex local Kotlin CAS seeds across all new tags`() {
         val serverSeed = "2BAC-SQRT-L1-956B2E27A8"
         assertTrue(RemoteSyncProtocol.isServerSeed(serverSeed))
         assertFalse(RemoteSyncProtocol.isLocalKotlinSeed(serverSeed))
         assertFalse(LimitsCasEngine.isValidSeed(serverSeed))
 
-        val localEx = LimitsCasEngine.generate("poly_factor", 2)
-        assertTrue(RemoteSyncProtocol.isLocalKotlinSeed(localEx.seed))
-        assertFalse(RemoteSyncProtocol.isServerSeed(localEx.seed))
-        assertTrue(LimitsCasEngine.isValidSeed(localEx.seed))
+        val lnEx = LimitsCasEngine.generate("ln_limits", 2, chapter = "limits")
+        assertTrue(lnEx.seed.contains("-LNLM-"))
+        assertTrue(RemoteSyncProtocol.isLocalKotlinSeed(lnEx.seed))
+        assertTrue(LimitsCasEngine.isValidSeed(lnEx.seed))
 
+        val seqEx = LimitsCasEngine.generate("seq_arith_geo", 2, chapter = "sequences")
+        assertTrue(seqEx.seed.contains("-SQAG-"))
+        assertTrue(RemoteSyncProtocol.isLocalKotlinSeed(seqEx.seed))
+        assertTrue(LimitsCasEngine.isValidSeed(seqEx.seed))
+
+        val nthEx = LimitsCasEngine.generate("nth_root", 2, chapter = "limits")
+        assertTrue(nthEx.seed.contains("-NTHR-"))
+        assertTrue(LimitsCasEngine.isValidSeed("2BAC-NROT-L2-1234ABCD"))
         assertFalse(LimitsCasEngine.isValidSeed("INVALID-SEED"))
     }
 

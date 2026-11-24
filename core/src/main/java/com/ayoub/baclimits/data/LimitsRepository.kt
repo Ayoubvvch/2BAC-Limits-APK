@@ -13,6 +13,7 @@ class LimitsRepository(
         private const val PREFS_SESSION = "bac_limits_native_session"
         private const val KEY_ACTIVE_USER = "active_username"
         private const val KEY_APP_LANG = "app_lang"
+        private const val KEY_APP_CHAPTER = "app_chapter"
         private const val KEY_SHOW_IME = "show_system_keyboard"
     }
 
@@ -27,7 +28,6 @@ class LimitsRepository(
             return savedUser to (savedLang ?: "ar")
         }
 
-        // Seamless upgrade from v1.0.1 / v1.0.2 WebView SQLite session
         val migrated = db.getLastActiveStudent()
         if (migrated != null) {
             val lang = savedLang ?: migrated.second
@@ -36,6 +36,16 @@ class LimitsRepository(
         }
 
         return null to (savedLang ?: "ar")
+    }
+
+    fun getInitialChapter(): String {
+        val ch = prefs.getString(KEY_APP_CHAPTER, "limits")
+        return if (ch == "sequences") "sequences" else "limits"
+    }
+
+    fun saveChapter(chapter: String) {
+        val clean = if (chapter == "sequences") "sequences" else "limits"
+        prefs.edit().putString(KEY_APP_CHAPTER, clean).apply()
     }
 
     fun saveSession(username: String, lang: String) {
@@ -70,31 +80,29 @@ class LimitsRepository(
         val res = localApi.handle("POST", "/api/login", payload.toString())
         return if (res.status in 200..299) {
             try {
-                val stats = LimitsJsonParser.parseStats(JSONObject(res.bodyJson))
-                Result.success(stats)
+                Result.success(LimitsJsonParser.parseStats(JSONObject(res.bodyJson)))
             } catch (e: Exception) {
                 Result.failure(e)
             }
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
         }
     }
 
-    fun stats(username: String, existingFallback: StudentStats? = null): Result<StudentStats> {
+    fun stats(username: String, existingFallback: StudentStats? = null, lang: String = "ar"): Result<StudentStats> {
         val res = localApi.handle("GET", "/api/student/${encodeSegment(username)}/stats", null)
         return if (res.status in 200..299) {
             try {
-                val stats = LimitsJsonParser.parseStats(JSONObject(res.bodyJson), existingFallback)
-                Result.success(stats)
+                Result.success(LimitsJsonParser.parseStats(JSONObject(res.bodyJson), existingFallback))
             } catch (e: Exception) {
                 Result.failure(e)
             }
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
         }
     }
 
-    fun resume(username: String): Result<ResumeState> {
+    fun resume(username: String, lang: String = "ar"): Result<ResumeState> {
         val res = localApi.handle("GET", "/api/student/${encodeSegment(username)}/resume", null)
         return if (res.status in 200..299) {
             try {
@@ -103,7 +111,7 @@ class LimitsRepository(
                 Result.failure(e)
             }
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
         }
     }
 
@@ -114,18 +122,21 @@ class LimitsRepository(
         return if (res.status in 200..299) {
             Result.success(Unit)
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, cleanLang)))
         }
     }
 
     fun nextExercise(
         username: String,
+        chapter: String = "limits",
         technique: String,
         difficulty: Int,
-        seed: String? = null
+        seed: String? = null,
+        lang: String = "ar"
     ): Result<ExerciseData> {
         val payload = JSONObject()
             .put("username", username.trim())
+            .put("chapter", if (chapter == "sequences") "sequences" else "limits")
             .put("technique", technique)
             .put("difficulty", difficulty)
             .put("seed", seed?.trim()?.takeIf { it.isNotEmpty() } ?: JSONObject.NULL)
@@ -137,11 +148,43 @@ class LimitsRepository(
                 Result.failure(e)
             }
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
         }
     }
 
-    fun requestHint(username: String, seed: String, hintIndex: Int): Result<LocalizedMessage> {
+    fun startExercise(username: String, seed: String, lang: String = "ar"): Result<ExerciseData> {
+        val payload = JSONObject()
+            .put("username", username.trim())
+            .put("seed", seed.trim())
+        val res = localApi.handle("POST", "/api/exercises/start", payload.toString())
+        return if (res.status in 200..299) {
+            try {
+                Result.success(LimitsJsonParser.parseExercise(JSONObject(res.bodyJson)))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        } else {
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
+        }
+    }
+
+    fun pauseExercise(username: String, seed: String, lang: String = "ar"): Result<PauseResult> {
+        val payload = JSONObject()
+            .put("username", username.trim())
+            .put("seed", seed.trim())
+        val res = localApi.handle("POST", "/api/exercises/pause", payload.toString())
+        return if (res.status in 200..299) {
+            try {
+                Result.success(LimitsJsonParser.parsePause(JSONObject(res.bodyJson)))
+            } catch (e: Exception) {
+                Result.failure(e)
+            }
+        } else {
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
+        }
+    }
+
+    fun requestHint(username: String, seed: String, hintIndex: Int, lang: String = "ar"): Result<LocalizedMessage> {
         val payload = JSONObject()
             .put("username", username.trim())
             .put("seed", seed.trim())
@@ -156,7 +199,7 @@ class LimitsRepository(
                 Result.failure(e)
             }
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
         }
     }
 
@@ -164,12 +207,17 @@ class LimitsRepository(
         username: String,
         seed: String,
         answer: String,
-        existingStats: StudentStats?
+        solveTimeSec: Double? = null,
+        existingStats: StudentStats?,
+        lang: String = "ar"
     ): Result<SubmitResult> {
         val payload = JSONObject()
             .put("username", username.trim())
             .put("seed", seed.trim())
             .put("answer", answer.trim())
+        if (solveTimeSec != null && solveTimeSec > 0.0) {
+            payload.put("solve_time_sec", solveTimeSec)
+        }
         val res = localApi.handle("POST", "/api/exercises/submit", payload.toString())
         return if (res.status in 200..299) {
             try {
@@ -178,25 +226,30 @@ class LimitsRepository(
                 Result.failure(e)
             }
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
         }
     }
 
-    fun requestSolution(username: String, seed: String): Result<SolutionData> {
+    fun requestSolution(
+        username: String,
+        seed: String,
+        existingStats: StudentStats? = null,
+        lang: String = "ar"
+    ): Result<SolutionResult> {
         val payload = JSONObject()
             .put("username", username.trim())
             .put("seed", seed.trim())
         val res = localApi.handle("POST", "/api/exercises/solution", payload.toString())
         return if (res.status in 200..299) {
             try {
-                val sol = LimitsJsonParser.parseSolution(JSONObject(res.bodyJson))
+                val sol = LimitsJsonParser.parseSolutionResult(JSONObject(res.bodyJson), existingStats)
                     ?: return Result.failure(IllegalStateException("Empty solution payload"))
                 Result.success(sol)
             } catch (e: Exception) {
                 Result.failure(e)
             }
         } else {
-            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status)))
+            Result.failure(IllegalStateException(LimitsJsonParser.parseApiError(res.bodyJson, res.status, lang)))
         }
     }
 

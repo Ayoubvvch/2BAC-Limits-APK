@@ -1,6 +1,6 @@
-# 2BAC Limits — Native Android APK (Dual Editions: Lite & Full)
+# 2BAC Limits & Suites — Native Android APK (Dual Editions: Lite & Full)
 
-100% native Jetpack Compose & Material 3 Android application for **2BAC PC — Labo des Limites** (`مختبر النهايات اللانهائي`), designed from the ground up for mobile portrait & landscape usage in pure OLED Black Mode (`#000000`).
+100% native Jetpack Compose & Material 3 Android application for **2BAC PC — Labo Limites & Suites** (`مختبر النهايات والمتتاليات`), covering both chapters (**Limites** including `ln` & `exp`, and **Suites numériques**) across **12 techniques**, designed for mobile portrait & landscape usage in pure OLED Black Mode (`#000000`).
 
 ---
 
@@ -9,10 +9,11 @@
 | الميزة / Feature | النسخة الخفيفة (Lite Edition) | النسخة الكاملة (Full Edition) |
 |---|---|---|
 | **حجم التطبيق (APK Size)** | **~2.4 MB** (خفيف جداً) | **~25–30 MB** (شامل مكتبات بايثون) |
-| **المحرك أوفلاين (Offline Engine)** | محرك Kotlin CAS الداخلي | **Python 3.11 + SymPy 1.13+ CAS** |
+| **المحرك أوفلاين (Offline Engine)** | محرك Kotlin CAS الداخلي (12 تقنية + المتتاليات في `n`) | **Python 3.11 + SymPy 1.13+ CAS** |
 | **دقة التوليد أوفلاين** | بارامترية سريعة ودقيقة | **100% مطابقة تامة لخوارزميات السيرفر** |
-| **التصحيح الرمزي (Grading)** | فحص رمزي محلي مدمج | **SymPy CAS Symbolic Proof & Equivalence** |
+| **التصحيح الرمزي (Grading)** | ثوابت + دوال بدلالة `n` | **SymPy CAS Symbolic Proof (`constant` & `expression_n`)** |
 | **سرعة الإقلاع الأول** | فوري ولحظي | ثوانٍ إضافية في أول تشغيل لفك الحزم ثم سريع |
+| **المؤقت وقفل التركيز** | Start Gate + Chrono + Pause-First + Focus Lock | Start Gate + Chrono + Pause-First + Focus Lock |
 | **المزامنة السحابية (Cloud Sync)** | متزامنة مع خادمنا (`51.170.138.59`) | متزامنة مع خادمنا (`51.170.138.59`) |
 | **اسم الحزمة (Application ID)** | `com.ayoub.baclimits` | `com.ayoub.baclimits.full` |
 | **اسم ملف الـ APK** | `2BAC-Limits-Lite-v{VER}.apk` | `2BAC-Limits-Full-v{VER}.apk` |
@@ -43,7 +44,8 @@
 │           │   └── AppUpdaterManager.kt
 │           ├── math/
 │           │   ├── MathExprEvaluator.kt
-│           │   └── LimitsCasEngine.kt       # Pure Kotlin CAS engine
+│           │   ├── LimitsCasEngine.kt           # Pure Kotlin CAS engine (12 techniques)
+│           │   └── NewChaptersCasGenerators.kt  # ln, exp & sequences CAS generators
 │           └── ui/
 │               ├── BacLimitsViewModel.kt
 │               ├── i18n/AppStrings.kt
@@ -69,13 +71,15 @@
     └── src/main/
         ├── AndroidManifest.xml
         ├── python/
-        │   ├── engine/                 # 4,619 lines of Moroccan limits procedural code
+        │   ├── engine/                 # Complete Moroccan 2BAC PC server engine (Limits + Suites)
         │   │   ├── models.py
+        │   │   ├── adaptive.py
+        │   │   ├── formatting.py
         │   │   ├── bricks.py
         │   │   ├── selector.py
         │   │   ├── verifier.py
-        │   │   └── generators/
-        │   └── engine_bridge.py        # Python bridge for generation & grading
+        │   │   └── generators/         # incl. ln_limits.py, exp_limits.py, sequences.py
+        │   └── engine_bridge.py        # Python bridge for adaptive generation & grading
         └── java/com/ayoub/baclimits/
             ├── MainActivity.kt         # Injects FullPythonLimitsEngine
             └── full/
