@@ -85,6 +85,10 @@ android {
 chaquopy {
     defaultConfig {
         version = "3.11"
+        val propBuildPython = (project.findProperty("buildPython") as String?)?.takeIf { it.isNotBlank() }
+        if (propBuildPython != null) {
+            buildPython(propBuildPython)
+        }
         pip {
             install("sympy>=1.13")
         }
