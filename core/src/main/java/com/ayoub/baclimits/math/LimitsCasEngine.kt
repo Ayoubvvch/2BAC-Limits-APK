@@ -30,7 +30,7 @@ data class GeneratedExercise(
     )
 )
 
-private class SplitMix64(seed: Long) {
+internal class SplitMix64(seed: Long) {
     private var state: Long = seed
 
     fun nextLong(): Long {

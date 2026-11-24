@@ -75,6 +75,16 @@ class LimitsCasEngineTest {
                     }
                     assertTrue(ex.hints.isNotEmpty())
                     assertTrue(ex.steps.isNotEmpty())
+                    assertEquals("Odd \$ count in prompt AR: ${ex.prompt.ar}", 0, ex.prompt.ar.count { it == '$' } % 2)
+                    assertEquals("Odd \$ count in prompt FR: ${ex.prompt.fr}", 0, ex.prompt.fr.count { it == '$' } % 2)
+                    ex.hints.forEach { h ->
+                        assertEquals("Odd \$ count in hint AR: ${h.ar}", 0, h.ar.count { it == '$' } % 2)
+                        assertEquals("Odd \$ count in hint FR: ${h.fr}", 0, h.fr.count { it == '$' } % 2)
+                    }
+                    ex.steps.forEach { st ->
+                        assertEquals("Odd \$ count in step title AR: ${st.title.ar}", 0, st.title.ar.count { it == '$' } % 2)
+                        assertEquals("Odd \$ count in step expl AR: ${st.explanation.ar}", 0, st.explanation.ar.count { it == '$' } % 2)
+                    }
                     seenSeeds.add(ex.seed)
 
                     // Deterministic replay from seed

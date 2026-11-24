@@ -42,7 +42,7 @@ jobs:
             if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
               VERSION="${GITHUB_REF_NAME#v}"
             else
-              PATCH_NUM=$(( ${{ github.run_number }} - 10 ))
+              PATCH_NUM=$(( ${{ github.run_number }} - 11 ))
               if [ "$PATCH_NUM" -lt 0 ]; then PATCH_NUM=0; fi
               VERSION="1.2.${PATCH_NUM}"
             fi

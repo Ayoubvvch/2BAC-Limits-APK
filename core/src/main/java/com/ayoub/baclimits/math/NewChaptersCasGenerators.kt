@@ -132,8 +132,8 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                ar = "استعمل النهاية الأساسية $\\lim_{x \\to +\\infty} \\frac{\\ln x}{x^$p} = 0$.",
-                                fr = "Utilisez la croissance comparée $\\lim_{x \\to +\\infty} \\frac{\\ln x}{x^$p} = 0$."
+                                ar = "استعمل النهاية الأساسية \$\\lim_{x \\to +\\infty} \\frac{\\ln x}{x^$p} = 0\$.",
+                                fr = "Utilisez la croissance comparée \$\\lim_{x \\to +\\infty} \\frac{\\ln x}{x^$p} = 0\$."
                             )
                         ),
                         answerLatex = "0",
@@ -142,8 +142,8 @@ internal object NewChaptersCasGenerators {
                             SolutionStep(
                                 title = LocalizedText("تطبيق المقارنة اللوغاريتمية", "Croissance comparée logarithmique"),
                                 explanation = LocalizedText(
-                                    "بوضع $t = $argTex \\to +\\infty$ نستعمل $\\lim_{t \\to +\\infty} \\frac{\\ln t}{t^$p} = 0$:",
-                                    "En posant $t = $argTex \\to +\\infty$, on utilise $\\lim_{t \\to +\\infty} \\frac{\\ln t}{t^$p} = 0$ :"
+                                    "بوضع \$t = $argTex \\to +\\infty\$ نستعمل \$\\lim_{t \\to +\\infty} \\frac{\\ln t}{t^$p} = 0\$:",
+                                    "En posant \$t = $argTex \\to +\\infty\$, on utilise \$\\lim_{t \\to +\\infty} \\frac{\\ln t}{t^$p} = 0\$ :"
                                 ),
                                 latex = "$fullTex = 0"
                             )
@@ -169,18 +169,18 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "استعمل النهاية الاعتيادية $\\lim_{x \\to 0^+} x\\ln x = 0$.",
-                                "Utilisez la limite usuelle $\\lim_{x \\to 0^+} x\\ln x = 0$."
+                                "استعمل النهاية الاعتيادية \$\\lim_{x \\to 0^+} x\\ln x = 0\$.",
+                                "Utilisez la limite usuelle \$\\lim_{x \\to 0^+} x\\ln x = 0\$."
                             )
                         ),
                         answerLatex = "$d",
                         expectedAnswer = ExpectedAnswer.Finite(d.toDouble()),
                         steps = listOf(
                             SolutionStep(
-                                title = LocalizedText("تطبيق النهاية عند $0^+$", "Limite usuelle en $0^+$"),
+                                title = LocalizedText("تطبيق النهاية عند \$0^+\$", "Limite usuelle en \$0^+\$"),
                                 explanation = LocalizedText(
-                                    "بما أن $\\lim_{x \\to 0^+} x\\ln($bx) = 0$ فإن:",
-                                    "Comme $\\lim_{x \\to 0^+} x\\ln($bx) = 0$, on obtient :"
+                                    "بما أن \$\\lim_{x \\to 0^+} x\\ln($bx) = 0\$ فإن:",
+                                    "Comme \$\\lim_{x \\to 0^+} x\\ln($bx) = 0\$, on obtient :"
                                 ),
                                 latex = "$fullTex = $d"
                             )
@@ -207,18 +207,18 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "اكتب البسط على شكل $\\ln(1 + u(x))$ حيث $u($x0) = 0$ ثم استعمل $\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1$.",
-                                "Écrivez le numérateur sous la forme $\\ln(1 + u(x))$ avec $u($x0) = 0$, puis utilisez $\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1$."
+                                "اكتب البسط على شكل \$\\ln(1 + u(x))\$ حيث \$u($x0) = 0\$ ثم استعمل \$\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1\$.",
+                                "Écrivez le numérateur sous la forme \$\\ln(1 + u(x))\$ avec \$u($x0) = 0\$, puis utilisez \$\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1\$."
                             )
                         ),
                         answerLatex = ansTex,
                         expectedAnswer = ExpectedAnswer.Finite(r.toDouble() / m.toDouble()),
                         steps = listOf(
                             SolutionStep(
-                                title = LocalizedText("معدل التغيّر عند $x_0 = $x0$", "Taux d'accroissement en $x_0 = $x0$"),
+                                title = LocalizedText("معدل التغيّر عند \$x_0 = $x0\$", "Taux d'accroissement en \$x_0 = $x0\$"),
                                 explanation = LocalizedText(
-                                    "نكتب $argTex = 1 + $r($lin)$ ونضع $u = $r($lin) \\to 0$:",
-                                    "On écrit $argTex = 1 + $r($lin)$ et on pose $u = $r($lin) \\to 0$ :"
+                                    "نكتب \$$argTex = 1 + $r($lin)\$ ونضع \$u = $r($lin) \\to 0\$:",
+                                    "On écrit \$$argTex = 1 + $r($lin)\$ et on pose \$u = $r($lin) \\to 0\$ :"
                                 ),
                                 latex = "$fullTex = \\frac{$r}{$m} = $ansTex"
                             )
@@ -257,8 +257,8 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "عمّل البسط والمقام بـ $$xp$ ثم استعمل $\\frac{\\ln x}{$xp} \\to 0$.",
-                                "Factorisez numérateur et dénominateur par $$xp$ puis utilisez $\\frac{\\ln x}{$xp} \\to 0$."
+                                "عمّل البسط والمقام بـ \$$xp\$ ثم استعمل \$\\frac{\\ln x}{$xp} \\to 0\$.",
+                                "Factorisez numérateur et dénominateur par \$$xp\$ puis utilisez \$\\frac{\\ln x}{$xp} \\to 0\$."
                             )
                         ),
                         answerLatex = ansTex,
@@ -267,8 +267,8 @@ internal object NewChaptersCasGenerators {
                             SolutionStep(
                                 title = LocalizedText("التعميل بالحد الأكبر درجة", "Factorisation par le terme dominant"),
                                 explanation = LocalizedText(
-                                    "نُعمّل بـ $$xp$؛ وبما أن $\\lim_{x \\to +\\infty} \\frac{\\ln(${fmtLinearExpr(b, c)})}{$xp} = 0$:",
-                                    "On factorise par $$xp$ ; comme $\\lim_{x \\to +\\infty} \\frac{\\ln(${fmtLinearExpr(b, c)})}{$xp} = 0$ :"
+                                    "نُعمّل بـ \$$xp\$؛ وبما أن \$\\lim_{x \\to +\\infty} \\frac{\\ln(${fmtLinearExpr(b, c)})}{$xp} = 0\$:",
+                                    "On factorise par \$$xp\$ ; comme \$\\lim_{x \\to +\\infty} \\frac{\\ln(${fmtLinearExpr(b, c)})}{$xp} = 0\$ :"
                                 ),
                                 latex = "$fullTex = $ansTex"
                             )
@@ -298,18 +298,18 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "عمّل بـ $$xp$ لتحويل $\\infty - \\infty$ إلى جداء.",
-                                "Factorisez par $$xp$ pour lever l'indétermination $\\infty - \\infty$."
+                                "عمّل بـ \$$xp\$ لتحويل \$\\infty - \\infty\$ إلى جداء.",
+                                "Factorisez par \$$xp\$ pour lever l'indétermination \$\\infty - \\infty\$."
                             )
                         ),
                         answerLatex = ansTex,
                         expectedAnswer = if (isPos) ExpectedAnswer.PosInf else ExpectedAnswer.NegInf,
                         steps = listOf(
                             SolutionStep(
-                                title = LocalizedText("التعميل بـ $$xp$", "Factorisation par $$xp$"),
+                                title = LocalizedText("التعميل بـ \$$xp\$", "Factorisation par \$$xp\$"),
                                 explanation = LocalizedText(
-                                    "بالتعميل بـ $$xp$ تؤول النسبة $\\frac{\\ln(${fmtLinearExpr(c, d)})}{$xp}$ إلى $0$:",
-                                    "En factorisant par $$xp$, le quotient $\\frac{\\ln(${fmtLinearExpr(c, d)})}{$xp}$ tend vers $0$ :"
+                                    "بالتعميل بـ \$$xp\$ تؤول النسبة \$\\frac{\\ln(${fmtLinearExpr(c, d)})}{$xp}\$ إلى \$0\$:",
+                                    "En factorisant par \$$xp\$, le quotient \$\\frac{\\ln(${fmtLinearExpr(c, d)})}{$xp}\$ tend vers \$0\$ :"
                                 ),
                                 latex = "$fullTex = $ansTex"
                             )
@@ -341,8 +341,8 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "عمّل داخل كل لوغاريتم بأكبر قوة لـ $x$ ثم اختزل بـ $\\ln x$.",
-                                "Factorisez par la plus grande puissance de $x$ dans chaque $\\ln$ puis simplifiez par $\\ln x$."
+                                "عمّل داخل كل لوغاريتم بأكبر قوة لـ \$x\$ ثم اختزل بـ \$\\ln x\$.",
+                                "Factorisez par la plus grande puissance de \$x\$ dans chaque \$\\ln\$ puis simplifiez par \$\\ln x\$."
                             )
                         ),
                         answerLatex = ansTex,
@@ -351,8 +351,8 @@ internal object NewChaptersCasGenerators {
                             SolutionStep(
                                 title = LocalizedText("التعميل داخل اللوغاريتم", "Factorisation dans chaque logarithme"),
                                 explanation = LocalizedText(
-                                    "نكتب البسط ${p}\\ln x + \\dots والمقام ${q}\\ln x + \\dots ثم نختزل بـ $\\ln x$:",
-                                    "On obtient ${p}\\ln x + \\dots au numérateur et ${q}\\ln x + \\dots au dénominateur, puis on simplifie par $\\ln x$ :"
+                                    "نكتب البسط \$${p}\\ln x + \\dots\$ والمقام \$${q}\\ln x + \\dots\$ ثم نختزل بـ \$\\ln x\$:",
+                                    "On obtient \$${p}\\ln x + \\dots\$ au numérateur et \$${q}\\ln x + \\dots\$ au dénominateur, puis on simplifie par \$\\ln x\$ :"
                                 ),
                                 latex = "$fullTex = $ansTex"
                             )
@@ -384,8 +384,8 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "استعمل $\\ln A - \\ln B = \\ln(A/B)$ وأظهر الشكل $\\ln(1 + u)$.",
-                            "Utilisez $\\ln A - \\ln B = \\ln(A/B)$ puis faites apparaître $\\ln(1 + u)$."
+                            "استعمل \$\\ln A - \\ln B = \\ln(A/B)\$ وأظهر الشكل \$\\ln(1 + u)\$.",
+                            "Utilisez \$\\ln A - \\ln B = \\ln(A/B)\$ puis faites apparaître \$\\ln(1 + u)\$."
                         )
                     ),
                     answerLatex = ansTex,
@@ -394,8 +394,8 @@ internal object NewChaptersCasGenerators {
                         SolutionStep(
                             title = LocalizedText("دمج اللوغاريتمين", "Regroupement des logarithmes"),
                             explanation = LocalizedText(
-                                "نكتب $x\\ln\\left(1 + \\frac{$diffAb}{$u2}\\right)$ ونستعمل $\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1$:",
-                                "On écrit $x\\ln\\left(1 + \\frac{$diffAb}{$u2}\\right)$ et on utilise $\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1$ :"
+                                "نكتب \$x\\ln\\left(1 + \\frac{$diffAb}{$u2}\\right)\$ ونستعمل \$\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1\$:",
+                                "On écrit \$x\\ln\\left(1 + \\frac{$diffAb}{$u2}\\right)\$ et on utilise \$\\lim_{u \\to 0} \\frac{\\ln(1+u)}{u} = 1\$ :"
                             ),
                             latex = "$fullTex = $ansTex"
                         )
@@ -417,18 +417,18 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "اكتب $x(\\ln x)^2 = 4(\\sqrt{x}\\ln\\sqrt{x})^2$ واستعمل $\\lim_{t \\to 0^+} t\\ln t = 0$.",
-                            "Écrivez $x(\\ln x)^2 = 4(\\sqrt{x}\\ln\\sqrt{x})^2$ et utilisez $\\lim_{t \\to 0^+} t\\ln t = 0$."
+                            "اكتب \$x(\\ln x)^2 = 4(\\sqrt{x}\\ln\\sqrt{x})^2\$ واستعمل \$\\lim_{t \\to 0^+} t\\ln t = 0\$.",
+                            "Écrivez \$x(\\ln x)^2 = 4(\\sqrt{x}\\ln\\sqrt{x})^2\$ et utilisez \$\\lim_{t \\to 0^+} t\\ln t = 0\$."
                         )
                     ),
                     answerLatex = "$d",
                     expectedAnswer = ExpectedAnswer.Finite(d.toDouble()),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("وضع $t = \\sqrt{x} \\to 0^+$", "Changement $t = \\sqrt{x} \\to 0^+$"),
+                            title = LocalizedText("وضع \$t = \\sqrt{x} \\to 0^+\$", "Changement \$t = \\sqrt{x} \\to 0^+\$"),
                             explanation = LocalizedText(
-                                "لدينا $\\lim_{x \\to 0^+} x(\\ln x)^2 = 0$، ومنه:",
-                                "On a $\\lim_{x \\to 0^+} x(\\ln x)^2 = 0$, d'où :"
+                                "لدينا \$\\lim_{x \\to 0^+} x(\\ln x)^2 = 0\$، ومنه:",
+                                "On a \$\\lim_{x \\to 0^+} x(\\ln x)^2 = 0\$, d'où :"
                             ),
                             latex = "$fullTex = $d"
                         )
@@ -457,8 +457,8 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "اضرب في المرافق $\\sqrt{$pTex} + $L$ واستعمل $\\frac{\\ln(1+u)}{u} \\to 1$.",
-                            "Multipliez par le conjugué $\\sqrt{$pTex} + $L$ puis utilisez $\\frac{\\ln(1+u)}{u} \\to 1$."
+                            "اضرب في المرافق \$\\sqrt{$pTex} + $L\$ واستعمل \$\\frac{\\ln(1+u)}{u} \\to 1\$.",
+                            "Multipliez par le conjugué \$\\sqrt{$pTex} + $L\$ puis utilisez \$\\frac{\\ln(1+u)}{u} \\to 1\$."
                         )
                     ),
                     answerLatex = ansTex,
@@ -467,8 +467,8 @@ internal object NewChaptersCasGenerators {
                         SolutionStep(
                             title = LocalizedText("الجمع بين المرافق واللوغاريتم", "Conjugué et limite logarithmique"),
                             explanation = LocalizedText(
-                                "بعد الضرب في المرافق والاختزال بـ $(${fmtFactor(x0)})$ نحصل على:",
-                                "Après multiplication par le conjugué et simplification par $(${fmtFactor(x0)})$ :"
+                                "بعد الضرب في المرافق والاختزال بـ \$(${fmtFactor(x0)})\$ نحصل على:",
+                                "Après multiplication par le conjugué et simplification par \$(${fmtFactor(x0)})\$ :"
                             ),
                             latex = "$fullTex = $ansTex"
                         )
@@ -507,18 +507,18 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "استعمل $\\lim_{x \\to +\\infty} \\frac{e^x}{x^$p} = +\\infty$ وانتبه لإشارة المعامل $a$.",
-                                "Utilisez $\\lim_{x \\to +\\infty} \\frac{e^x}{x^$p} = +\\infty$ en tenant compte du signe."
+                                "استعمل \$\\lim_{x \\to +\\infty} \\frac{e^x}{x^$p} = +\\infty\$ وانتبه لإشارة المعامل \$a\$.",
+                                "Utilisez \$\\lim_{x \\to +\\infty} \\frac{e^x}{x^$p} = +\\infty\$ en tenant compte du signe."
                             )
                         ),
                         answerLatex = ansTex,
                         expectedAnswer = if (isPos) ExpectedAnswer.PosInf else ExpectedAnswer.NegInf,
                         steps = listOf(
                             SolutionStep(
-                                title = LocalizedText("المقارنة الأسية عند $+\\infty$", "Croissance comparée en $+\\infty$"),
+                                title = LocalizedText("المقارنة الأسية عند \$+\\infty\$", "Croissance comparée en \$+\\infty\$"),
                                 explanation = LocalizedText(
-                                    "بما أن $\\lim_{x \\to +\\infty} \\frac{$ek}{$xp} = +\\infty$ ومع الإشارة، نحصل على:",
-                                    "Comme $\\lim_{x \\to +\\infty} \\frac{$ek}{$xp} = +\\infty$, on obtient :"
+                                    "بما أن \$\\lim_{x \\to +\\infty} \\frac{$ek}{$xp} = +\\infty\$ ومع الإشارة، نحصل على:",
+                                    "Comme \$\\lim_{x \\to +\\infty} \\frac{$ek}{$xp} = +\\infty\$, on obtient :"
                                 ),
                                 latex = "$fullTex = $ansTex"
                             )
@@ -543,18 +543,18 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "استعمل النهاية الأساسية $\\lim_{x \\to -\\infty} x^n e^x = 0$.",
-                                "Utilisez la limite usuelle $\\lim_{x \\to -\\infty} x^n e^x = 0$."
+                                "استعمل النهاية الأساسية \$\\lim_{x \\to -\\infty} x^n e^x = 0\$.",
+                                "Utilisez la limite usuelle \$\\lim_{x \\to -\\infty} x^n e^x = 0\$."
                             )
                         ),
                         answerLatex = "$c",
                         expectedAnswer = ExpectedAnswer.Finite(c.toDouble()),
                         steps = listOf(
                             SolutionStep(
-                                title = LocalizedText("النهاية عند $-\\infty$", "Limite usuelle en $-\\infty$"),
+                                title = LocalizedText("النهاية عند \$-\\infty\$", "Limite usuelle en \$-\\infty\$"),
                                 explanation = LocalizedText(
-                                    "بما أن $\\lim_{x \\to -\\infty} $xp $ek = 0$:",
-                                    "Comme $\\lim_{x \\to -\\infty} $xp $ek = 0$ :"
+                                    "بما أن \$\\lim_{x \\to -\\infty} $xp $ek = 0\$:",
+                                    "Comme \$\\lim_{x \\to -\\infty} $xp $ek = 0\$ :"
                                 ),
                                 latex = "$fullTex = $c"
                             )
@@ -578,8 +578,8 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "استعمل النهاية الاعتيادية $\\lim_{u \\to 0} \\frac{e^u - 1}{u} = 1$.",
-                                "Utilisez $\\lim_{u \\to 0} \\frac{e^u - 1}{u} = 1$."
+                                "استعمل النهاية الاعتيادية \$\\lim_{u \\to 0} \\frac{e^u - 1}{u} = 1\$.",
+                                "Utilisez \$\\lim_{u \\to 0} \\frac{e^u - 1}{u} = 1\$."
                             )
                         ),
                         answerLatex = ansTex,
@@ -588,8 +588,8 @@ internal object NewChaptersCasGenerators {
                             SolutionStep(
                                 title = LocalizedText("معدل التغيّر الأسي", "Taux d'accroissement exponentiel"),
                                 explanation = LocalizedText(
-                                    "بوضع $u = $eArg \\to 0$ نكتب $\\frac{e^{$eArg}-1}{$mTex} = \\frac{$a}{$m} \\cdot \\frac{e^u - 1}{u}$:",
-                                    "En posant $u = $eArg \\to 0$, on a $\\frac{e^{$eArg}-1}{$mTex} = \\frac{$a}{$m} \\cdot \\frac{e^u - 1}{u}$ :"
+                                    "بوضع \$u = $eArg \\to 0\$ نكتب \$\\frac{e^{$eArg}-1}{$mTex} = \\frac{$a}{$m} \\cdot \\frac{e^u - 1}{u}\$:",
+                                    "En posant \$u = $eArg \\to 0\$, on a \$\\frac{e^{$eArg}-1}{$mTex} = \\frac{$a}{$m} \\cdot \\frac{e^u - 1}{u}\$ :"
                                 ),
                                 latex = "$fullTex = $ansTex"
                             )
@@ -619,7 +619,7 @@ internal object NewChaptersCasGenerators {
                             c1 > 0 -> " + ${c1}e^{x}"
                             else -> " - ${-c1}e^{x}"
                         }
-                        return "$t2$t1${fmtSignedConst(c0)}"
+                        return "\$t2\$t1${fmtSignedConst(c0)}"
                     }
                     val numTex = fmtE(a, b, c)
                     val denTex = fmtE(d, f, g)
@@ -637,11 +637,11 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             if (atPosInf) LocalizedText(
-                                "عند $+\\infty$ عمّل البسط والمقام بالحد المهيمن $e^{2x}$.",
-                                "En $+\\infty$, factorisez par le terme dominant $e^{2x}$."
+                                "عند \$+\\infty\$ عمّل البسط والمقام بالحد المهيمن \$e^{2x}\$.",
+                                "En \$+\\infty\$, factorisez par le terme dominant \$e^{2x}\$."
                             ) else LocalizedText(
-                                "انتبه! ما هي نهاية $e^x$ عندما يؤول $x$ إلى $-\\infty$؟",
-                                "Attention à la borne $-\\infty$ ! Quelle est la limite de $e^x$ en $-\\infty$ ?"
+                                "انتبه! ما هي نهاية \$e^x\$ عندما يؤول \$x\$ إلى \$-\\infty\$؟",
+                                "Attention à la borne \$-\\infty\$ ! Quelle est la limite de \$e^x\$ en \$-\\infty\$ ?"
                             )
                         ),
                         answerLatex = ansTex,
@@ -649,12 +649,12 @@ internal object NewChaptersCasGenerators {
                         steps = listOf(
                             SolutionStep(
                                 title = LocalizedText(
-                                    if (atPosInf) "التعميل بـ $e^{2x}$ عند $+\\infty$" else "فخّ $-\\infty$: تعويض مباشر",
-                                    if (atPosInf) "Factorisation par $e^{2x}$ en $+\\infty$" else "Piège en $-\\infty$ : calcul direct"
+                                    if (atPosInf) "التعميل بـ \$e^{2x}\$ عند \$+\\infty\$" else "فخّ \$-\\infty\$: تعويض مباشر",
+                                    if (atPosInf) "Factorisation par \$e^{2x}\$ en \$+\\infty\$" else "Piège en \$-\\infty\$ : calcul direct"
                                 ),
                                 explanation = LocalizedText(
-                                    if (atPosInf) "نُعمّل بـ $e^{2x}$ لأن $e^{-x} \\to 0$:" else "عند $-\\infty$ لدينا $e^x \\to 0$ و $e^{2x} \\to 0$:",
-                                    if (atPosInf) "On factorise par $e^{2x}$ car $e^{-x} \\to 0$ :" else "En $-\\infty$, $e^x \\to 0$ et $e^{2x} \\to 0$ :"
+                                    if (atPosInf) "نُعمّل بـ \$e^{2x}\$ لأن \$e^{-x} \\to 0\$:" else "عند \$-\\infty\$ لدينا \$e^x \\to 0\$ و \$e^{2x} \\to 0\$:",
+                                    if (atPosInf) "On factorise par \$e^{2x}\$ car \$e^{-x} \\to 0\$ :" else "En \$-\\infty\$, \$e^x \\to 0\$ et \$e^{2x} \\to 0\$ :"
                                 ),
                                 latex = "$fullTex = $ansTex"
                             )
@@ -683,18 +683,18 @@ internal object NewChaptersCasGenerators {
                         fullLimitLatex = fullTex,
                         hints = listOf(
                             LocalizedText(
-                                "عمّل بـ $$ek$ واستعمل $\\frac{$xp}{$ek} \\to 0$.",
-                                "Factorisez par $$ek$ puis utilisez $\\frac{$xp}{$ek} \\to 0$."
+                                "عمّل بـ \$$ek\$ واستعمل \$\\frac{$xp}{$ek} \\to 0\$.",
+                                "Factorisez par \$$ek\$ puis utilisez \$\\frac{$xp}{$ek} \\to 0\$."
                             )
                         ),
                         answerLatex = ansTex,
                         expectedAnswer = if (isPos) ExpectedAnswer.PosInf else ExpectedAnswer.NegInf,
                         steps = listOf(
                             SolutionStep(
-                                title = LocalizedText("التعميل بالحد الأسي", "Factorisation par $ek"),
+                                title = LocalizedText("التعميل بالحد الأسي", "Factorisation par \$$ek\$"),
                                 explanation = LocalizedText(
-                                    "نُعمّل بـ $$ek$ ونستعمل المقارنة الأسية:",
-                                    "On factorise par $$ek$ et on applique la croissance comparée :"
+                                    "نُعمّل بـ \$$ek\$ ونستعمل المقارنة الأسية:",
+                                    "On factorise par \$$ek\$ et on applique la croissance comparée :"
                                 ),
                                 latex = "$fullTex = $ansTex"
                             )
@@ -722,18 +722,18 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "عمّل بـ $$ek$ داخل اللوغاريتم ثم اختزل $$kx$ مع $- $kx$.",
-                            "Factorisez par $$ek$ dans le $\\ln$ pour simplifier $$kx$."
+                            "عمّل بـ \$$ek\$ داخل اللوغاريتم ثم اختزل \$$kx\$ مع \$- $kx\$.",
+                            "Factorisez par \$$ek\$ dans le \$\\ln\$ pour simplifier \$$kx\$."
                         )
                     ),
                     answerLatex = "\\ln($a)",
                     expectedAnswer = ExpectedAnswer.Finite(ln(a.toDouble())),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("التعميل بـ $$ek$ داخل اللوغاريتم", "Factorisation dans le logarithme"),
+                            title = LocalizedText("التعميل بـ \$$ek\$ داخل اللوغاريتم", "Factorisation dans le logarithme"),
                             explanation = LocalizedText(
-                                "نكتب $\\ln($ek($a + ${b}e^{-$kx})) - $kx = \\ln($a + ${b}e^{-$kx})$؛ وعند $+\\infty$:",
-                                "On écrit $\\ln($ek($a + ${b}e^{-$kx})) - $kx = \\ln($a + ${b}e^{-$kx})$ ; en $+\\infty$ :"
+                                "نكتب \$\\ln($ek($a + ${b}e^{-$kx})) - $kx = \\ln($a + ${b}e^{-$kx})\$؛ وعند \$+\\infty\$:",
+                                "On écrit \$\\ln($ek($a + ${b}e^{-$kx})) - $kx = \\ln($a + ${b}e^{-$kx})\$ ; en \$+\\infty\$ :"
                             ),
                             latex = "$fullTex = \\ln($a)"
                         )
@@ -756,18 +756,18 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "ضع تغيير المتغير $t = \\frac{1}{x} \\to 0^+$ لاستعمال $\\lim_{t \\to 0} \\frac{e^{at}-1}{t} = a$.",
-                            "Posez $t = \\frac{1}{x} \\to 0^+$ pour utiliser $\\lim_{t \\to 0} \\frac{e^{at}-1}{t} = a$."
+                            "ضع تغيير المتغير \$t = \\frac{1}{x} \\to 0^+\$ لاستعمال \$\\lim_{t \\to 0} \\frac{e^{at}-1}{t} = a\$.",
+                            "Posez \$t = \\frac{1}{x} \\to 0^+\$ pour utiliser \$\\lim_{t \\to 0} \\frac{e^{at}-1}{t} = a\$."
                         )
                     ),
                     answerLatex = "$ans",
                     expectedAnswer = ExpectedAnswer.Finite(ans.toDouble()),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("تغيير المتغير $t = 1/x$", "Changement de variable $t = 1/x$"),
+                            title = LocalizedText("تغيير المتغير \$t = 1/x\$", "Changement de variable \$t = 1/x\$"),
                             explanation = LocalizedText(
-                                "نحصل على $\\lim_{t \\to 0^+} \\frac{e^{${a}t}-1}{t} = $a$، وبإضافة الثابت:",
-                                "On obtient $\\lim_{t \\to 0^+} \\frac{e^{${a}t}-1}{t} = $a$, et en ajoutant la constante :"
+                                "نحصل على \$\\lim_{t \\to 0^+} \\frac{e^{${a}t}-1}{t} = $a\$، وبإضافة الثابت:",
+                                "On obtient \$\\lim_{t \\to 0^+} \\frac{e^{${a}t}-1}{t} = $a\$, et en ajoutant la constante :"
                             ),
                             latex = "$fullTex = $ans"
                         )
@@ -814,8 +814,8 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "عمّل بأكبر قوة لـ $n$ في البسط والمقام.",
-                            "Factorisez par la plus grande puissance de $n$ au numérateur et au dénominateur."
+                            "عمّل بأكبر قوة لـ \$n\$ في البسط والمقام.",
+                            "Factorisez par la plus grande puissance de \$n\$ au numérateur et au dénominateur."
                         )
                     ),
                     answerLatex = ansTex,
@@ -824,8 +824,8 @@ internal object NewChaptersCasGenerators {
                         SolutionStep(
                             title = LocalizedText("النسبة بين الحدين الأكبر درجة", "Quotient des termes dominants"),
                             explanation = LocalizedText(
-                                "عند $n \\to +\\infty$ نختزل بأكبر قوة لـ $n$:",
-                                "En $n \\to +\\infty$, on simplifie par la plus grande puissance de $n$ :"
+                                "عند \$n \\to +\\infty\$ نختزل بأكبر قوة لـ \$n\$:",
+                                "En \$n \\to +\\infty\$, on simplifie par la plus grande puissance de \$n\$ :"
                             ),
                             latex = "$fullTex = $ansTex"
                         )
@@ -856,18 +856,18 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "قارن الأساس $q$ بـ $1$: إذا كان $|q| < 1$ فإن $q^n \\to 0$، وإذا كان $q > 1$ فإن $q^n \\to +\\infty$.",
-                            "Comparez la raison $q$ à $1$ : si $|q| < 1$ alors $q^n \\to 0$."
+                            "قارن الأساس \$q\$ بـ \$1\$: إذا كان \$|q| < 1\$ فإن \$q^n \\to 0\$، وإذا كان \$q > 1\$ فإن \$q^n \\to +\\infty\$.",
+                            "Comparez la raison \$q\$ à \$1\$ : si \$|q| < 1\$ alors \$q^n \\to 0\$."
                         )
                     ),
                     answerLatex = ansTex,
                     expectedAnswer = expAns,
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("نهاية $q^n$", "Limite de la suite géométrique $q^n$"),
+                            title = LocalizedText("نهاية \$q^n\$", "Limite de la suite géométrique \$q^n\$"),
                             explanation = LocalizedText(
-                                if (conv) "بما أن $|q| < 1$ فإن $q^n \\to 0$:" else "بما أن $q > 1$ فإن $q^n \\to +\\infty$:",
-                                if (conv) "Comme $|q| < 1$, $q^n \\to 0$ :" else "Comme $q > 1$, $q^n \\to +\\infty$ :"
+                                if (conv) "بما أن \$|q| < 1\$ فإن \$q^n \\to 0\$:" else "بما أن \$q > 1\$ فإن \$q^n \\to +\\infty\$:",
+                                if (conv) "Comme \$|q| < 1\$, \$q^n \\to 0\$ :" else "Comme \$q > 1\$, \$q^n \\to +\\infty\$ :"
                             ),
                             latex = "$fullTex = $ansTex"
                         )
@@ -906,18 +906,18 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "عمّل البسط والمقام بأكبر أساس ($p^n$) ثم استعمل $(\\frac{$q}{$p})^n \\to 0$.",
-                            "Factorisez par la plus grande base ($p^n$) puis utilisez $(\\frac{$q}{$p})^n \\to 0$."
+                            "عمّل البسط والمقام بأكبر أساس (\$$p^n\$) ثم استعمل \$(\\frac{$q}{$p})^n \\to 0\$.",
+                            "Factorisez par la plus grande base (\$$p^n\$) puis utilisez \$(\\frac{$q}{$p})^n \\to 0\$."
                         )
                     ),
                     answerLatex = ansTex,
                     expectedAnswer = ExpectedAnswer.Finite(numAns.toDouble() / denAns.toDouble()),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("التعميل بالأساس الأكبر $p^n$", "Factorisation par la base dominante $p^n$"),
+                            title = LocalizedText("التعميل بالأساس الأكبر \$$p^n\$", "Factorisation par la base dominante \$$p^n\$"),
                             explanation = LocalizedText(
-                                "بما أن $0 < \\frac{$q}{$p} < 1$ فإن $\\left(\\frac{$q}{$p}\\right)^n \\to 0$:",
-                                "Comme $0 < \\frac{$q}{$p} < 1$, $\\left(\\frac{$q}{$p}\\right)^n \\to 0$ :"
+                                "بما أن \$0 < \\frac{$q}{$p} < 1\$ فإن \$\\left(\\frac{$q}{$p}\\right)^n \\to 0\$:",
+                                "Comme \$0 < \\frac{$q}{$p} < 1\$, \$\\left(\\frac{$q}{$p}\\right)^n \\to 0\$ :"
                             ),
                             latex = "$fullTex = $ansTex"
                         )
@@ -946,8 +946,8 @@ internal object NewChaptersCasGenerators {
                     fullLimitLatex = fullTex,
                     hints = listOf(
                         LocalizedText(
-                            "استعمل التأطير $-1 \\le $oscKind \\le 1$ بعد القسمة على $n$ (مبرهنة الحصر).",
-                            "Utilisez $-1 \\le $oscKind \\le 1$ après division par $n$ (gendarmes)."
+                            "استعمل التأطير \$-1 \\le $oscKind \\le 1\$ بعد القسمة على \$n\$ (مبرهنة الحصر).",
+                            "Utilisez \$-1 \\le $oscKind \\le 1\$ après division par \$n\$ (gendarmes)."
                         )
                     ),
                     answerLatex = ansTex,
@@ -956,8 +956,8 @@ internal object NewChaptersCasGenerators {
                         SolutionStep(
                             title = LocalizedText("التأطير ومصاديق التقارب", "Théorème des gendarmes"),
                             explanation = LocalizedText(
-                                "بما أن $\\left|\\frac{$oscKind}{n}\\right| \\le \\frac{1}{n} \\to 0$ نحصل على:",
-                                "Comme $\\left|\\frac{$oscKind}{n}\\right| \\le \\frac{1}{n} \\to 0$, il vient :"
+                                "بما أن \$\\left|\\frac{$oscKind}{n}\\right| \\le \\frac{1}{n} \\to 0\$ نحصل على:",
+                                "Comme \$\\left|\\frac{$oscKind}{n}\\right| \\le \\frac{1}{n} \\to 0\$, il vient :"
                             ),
                             latex = "$fullTex = $ansTex"
                         )
@@ -993,18 +993,18 @@ internal object NewChaptersCasGenerators {
                 fullLimitLatex = fullTex,
                 hints = listOf(
                     LocalizedText(
-                        "انتبه! اكتب $$baseRoot^{2n} = $p^n$ ثم عمّل بـ $$p^n$.",
-                        "Attention ! Écrivez $$baseRoot^{2n} = $p^n$ puis factorisez par $$p^n$."
+                        "انتبه! اكتب \$$baseRoot^{2n} = $p^n\$ ثم عمّل بـ \$$p^n\$.",
+                        "Attention ! Écrivez \$$baseRoot^{2n} = $p^n\$ puis factorisez par \$$p^n\$."
                     )
                 ),
                 answerLatex = ansTex,
                 expectedAnswer = ExpectedAnswer.Finite(a.toDouble() / c.toDouble()),
                 steps = listOf(
                     SolutionStep(
-                        title = LocalizedText("كشف فخ الأساس المخفي", "Déjouer le piège $baseRoot^{2n} = $p^n"),
+                        title = LocalizedText("كشف فخ الأساس المخفي", "Déjouer le piège \$$baseRoot^{2n} = $p^n\$"),
                         explanation = LocalizedText(
-                            "بعد تعويض $$baseRoot^{2n} = $p^n$ والتعميل بـ $$p^n$ نحصل على:",
-                            "En écrivant $$baseRoot^{2n} = $p^n$ et en factorisant par $$p^n$, on obtient :"
+                            "بعد تعويض \$$baseRoot^{2n} = $p^n\$ والتعميل بـ \$$p^n\$ نحصل على:",
+                            "En écrivant \$$baseRoot^{2n} = $p^n\$ et en factorisant par \$$p^n\$, on obtient :"
                         ),
                         latex = "$fullTex = $ansTex"
                     )
@@ -1055,7 +1055,7 @@ internal object NewChaptersCasGenerators {
                 fullLimitLatex = fullTex,
                 hints = listOf(
                     LocalizedText(
-                        "احسب أولاً نهاية الكسر الداخلي بالتعميل بـ $$p^n$ ثم استعمل اتصال الدالة.",
+                        "احسب أولاً نهاية الكسر الداخلي بالتعميل بـ \$$p^n\$ ثم استعمل اتصال الدالة.",
                         "Calculez d'abord la limite du quotient intérieur puis utilisez la continuité."
                     )
                 ),
@@ -1063,10 +1063,10 @@ internal object NewChaptersCasGenerators {
                 expectedAnswer = ExpectedAnswer.Finite(ansVal),
                 steps = listOf(
                     SolutionStep(
-                        title = LocalizedText("اتصال $v_n = f(u_n)$", "Continuité $v_n = f(u_n)$"),
+                        title = LocalizedText("اتصال \$v_n = f(u_n)\$", "Continuité \$v_n = f(u_n)\$"),
                         explanation = LocalizedText(
-                            "نهاية الكسر الداخلي هي $$ratioTex$، وباتصال الدالة نحصل على:",
-                            "Le quotient intérieur tend vers $$ratioTex$ ; par continuité :"
+                            "نهاية الكسر الداخلي هي \$$ratioTex\$، وباتصال الدالة نحصل على:",
+                            "Le quotient intérieur tend vers \$$ratioTex\$ ; par continuité :"
                         ),
                         latex = "$fullTex = $ansTex"
                     )
@@ -1119,24 +1119,24 @@ internal object NewChaptersCasGenerators {
                 difficulty = diff,
                 answerKind = "constant",
                 prompt = LocalizedText(
-                    "المتتالية $(v_n)$ هندسية. احسب أساسها $q$:",
-                    "La suite $(v_n)$ est géométrique. Calculer sa raison $q$ :"
+                    "المتتالية \$(v_n)\$ هندسية. احسب أساسها \$q\$:",
+                    "La suite \$(v_n)\$ est géométrique. Calculer sa raison \$q\$ :"
                 ),
                 fullLimitLatex = sysTex,
                 hints = listOf(
                     LocalizedText(
-                        "احسب $v_{n+1} = u_{n+1} - ($alpha)$ وعمّل لتظهر $v_n$.",
-                        "Calculez $v_{n+1} = u_{n+1} - ($alpha)$ puis factorisez par $v_n$."
+                        "احسب \$v_{n+1} = u_{n+1} - ($alpha)\$ وعمّل لتظهر \$v_n\$.",
+                        "Calculez \$v_{n+1} = u_{n+1} - ($alpha)\$ puis factorisez par \$v_n\$."
                     )
                 ),
                 answerLatex = qTex,
                 expectedAnswer = ExpectedAnswer.Finite(qp.toDouble() / qq.toDouble()),
                 steps = listOf(
                     SolutionStep(
-                        title = LocalizedText("تعبير $v_{n+1}$ بدلالة $v_n$", "Expression de $v_{n+1}$"),
+                        title = LocalizedText("تعبير \$v_{n+1}\$ بدلالة \$v_n\$", "Expression de \$v_{n+1}\$"),
                         explanation = LocalizedText(
-                            "نعوّض $u_{n+1}$ ونُعمّل بمعامل $u_n$:",
-                            "On remplace $u_{n+1}$ et on factorise :"
+                            "نعوّض \$u_{n+1}\$ ونُعمّل بمعامل \$u_n\$:",
+                            "On remplace \$u_{n+1}\$ et on factorise :"
                         ),
                         latex = "v_{n+1} = $qTex($vnDef) = $qTex v_n \\implies q = $qTex"
                     )
@@ -1150,22 +1150,22 @@ internal object NewChaptersCasGenerators {
                 difficulty = diff,
                 answerKind = "constant",
                 prompt = LocalizedText(
-                    "احسب الحد الأول $v_0$ للمتتالية المساعدة $(v_n)$:",
-                    "Calculer le premier terme $v_0$ de la suite auxiliaire $(v_n)$ :"
+                    "احسب الحد الأول \$v_0\$ للمتتالية المساعدة \$(v_n)\$:",
+                    "Calculer le premier terme \$v_0\$ de la suite auxiliaire \$(v_n)\$ :"
                 ),
                 fullLimitLatex = sysTex,
                 hints = listOf(
                     LocalizedText(
-                        "عوّض $n = 0$ في العلاقة $v_n = $vnDef$.",
-                        "Remplacez $n = 0$ dans $v_n = $vnDef$."
+                        "عوّض \$n = 0\$ في العلاقة \$v_n = $vnDef\$.",
+                        "Remplacez \$n = 0\$ dans \$v_n = $vnDef\$."
                     )
                 ),
                 answerLatex = "$v0",
                 expectedAnswer = ExpectedAnswer.Finite(v0.toDouble()),
                 steps = listOf(
                     SolutionStep(
-                        title = LocalizedText("التعويض المباشر", "Calcul direct pour $n = 0$"),
-                        explanation = LocalizedText("بما أن $u_0 = $u0$:", "Comme $u_0 = $u0$ :"),
+                        title = LocalizedText("التعويض المباشر", "Calcul direct pour \$n = 0\$"),
+                        explanation = LocalizedText("بما أن \$u_0 = $u0\$:", "Comme \$u_0 = $u0\$ :"),
                         latex = "v_0 = $u0 - ($alpha) = $v0"
                     )
                 ),
@@ -1184,24 +1184,24 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "expression_n",
                     prompt = LocalizedText(
-                        "علماً أن $(v_n)$ هندسية، عبّر عن $u_n$ بدلالة $n$:",
-                        "Sachant que $(v_n)$ est géométrique, exprimer $u_n$ en fonction de $n$ :"
+                        "علماً أن \$(v_n)\$ هندسية، عبّر عن \$u_n\$ بدلالة \$n\$:",
+                        "Sachant que \$(v_n)\$ est géométrique, exprimer \$u_n\$ en fonction de \$n\$ :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "أوجد الأساس $q = $qTex$ و $v_0 = $v0$ ثم اكتب $u_n = $alpha + v_0 q^n$.",
-                            "Trouvez $q = $qTex$ et $v_0 = $v0$, puis écrivez $u_n = $alpha + v_0 q^n$."
+                            "أوجد الأساس \$q = $qTex\$ و \$v_0 = $v0\$ ثم اكتب \$u_n = $alpha + v_0 q^n\$.",
+                            "Trouvez \$q = $qTex\$ et \$v_0 = $v0\$, puis écrivez \$u_n = $alpha + v_0 q^n\$."
                         )
                     ),
                     answerLatex = ansTex,
                     expectedAnswer = ExpectedAnswer.Finite(0.0),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("تعبير $v_n$ ثم $u_n$", "Expression de $v_n$ puis de $u_n$"),
+                            title = LocalizedText("تعبير \$v_n\$ ثم \$u_n\$", "Expression de \$v_n\$ puis de \$u_n\$"),
                             explanation = LocalizedText(
-                                "لدينا $v_n = $v0 \\cdot $powTex$ ومنه $u_n = $alpha + v_n$:",
-                                "On a $v_n = $v0 \\cdot $powTex$ d'où $u_n = $alpha + v_n$ :"
+                                "لدينا \$v_n = $v0 \\cdot $powTex\$ ومنه \$u_n = $alpha + v_n\$:",
+                                "On a \$v_n = $v0 \\cdot $powTex\$ d'où \$u_n = $alpha + v_n\$ :"
                             ),
                             latex = "u_n = $ansTex"
                         )
@@ -1224,14 +1224,14 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "constant",
                     prompt = LocalizedText(
-                        "استنتج نهاية المتتالية $(u_n)$ عندما يؤول $n$ إلى $+\\infty$:",
-                        "En déduire $\\lim_{n \\to +\\infty} u_n$ :"
+                        "استنتج نهاية المتتالية \$(u_n)\$ عندما يؤول \$n\$ إلى \$+\\infty\$:",
+                        "En déduire \$\\lim_{n \\to +\\infty} u_n\$ :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "عبّر عن $u_n = $alpha + v_0 q^n$ وقارن $q$ بـ $1$ (انتبه لإشارة $v_0$).",
-                            "Exprimez $u_n = $alpha + v_0 q^n$ et comparez $q$ à $1$."
+                            "عبّر عن \$u_n = $alpha + v_0 q^n\$ وقارن \$q\$ بـ \$1\$ (انتبه لإشارة \$v_0\$).",
+                            "Exprimez \$u_n = $alpha + v_0 q^n\$ et comparez \$q\$ à \$1\$."
                         )
                     ),
                     answerLatex = ansTex,
@@ -1240,8 +1240,8 @@ internal object NewChaptersCasGenerators {
                         SolutionStep(
                             title = LocalizedText("حساب النهاية", "Calcul de la limite"),
                             explanation = LocalizedText(
-                                "لدينا $u_n = $alpha + $v0 \\cdot ${fmtPowBaseN(qp, qq)}$ ومنه:",
-                                "On a $u_n = $alpha + $v0 \\cdot ${fmtPowBaseN(qp, qq)}$, d'où :"
+                                "لدينا \$u_n = $alpha + $v0 \\cdot ${fmtPowBaseN(qp, qq)}\$ ومنه:",
+                                "On a \$u_n = $alpha + $v0 \\cdot ${fmtPowBaseN(qp, qq)}\$, d'où :"
                             ),
                             latex = "\\lim_{n \\to +\\infty} u_n = $ansTex"
                         )
@@ -1265,14 +1265,14 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "expression_n",
                     prompt = LocalizedText(
-                        "احسب المجموع $S_n = v_0 + v_1 + \\dots + v_n$ بدلالة $n$:",
-                        "Calculer la somme $S_n = v_0 + v_1 + \\dots + v_n$ en fonction de $n$ :"
+                        "احسب المجموع \$S_n = v_0 + v_1 + \\dots + v_n\$ بدلالة \$n\$:",
+                        "Calculer la somme \$S_n = v_0 + v_1 + \\dots + v_n\$ en fonction de \$n\$ :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "استعمل $S_n = v_0 \\cdot \\frac{1 - q^{n+1}}{1 - q}$ (انتبه: عدد الحدود هو $n+1$).",
-                            "Utilisez $S_n = v_0 \\cdot \\frac{1 - q^{n+1}}{1 - q}$ (attention aux $n+1$ termes)."
+                            "استعمل \$S_n = v_0 \\cdot \\frac{1 - q^{n+1}}{1 - q}\$ (انتبه: عدد الحدود هو \$n+1\$).",
+                            "Utilisez \$S_n = v_0 \\cdot \\frac{1 - q^{n+1}}{1 - q}\$ (attention aux \$n+1\$ termes)."
                         )
                     ),
                     answerLatex = ansTex,
@@ -1281,8 +1281,8 @@ internal object NewChaptersCasGenerators {
                         SolutionStep(
                             title = LocalizedText("مجموع حدود متتالية هندسية", "Somme géométrique"),
                             explanation = LocalizedText(
-                                "نعوّض $v_0 = $v0$ و $q = $qTex$ في صيغة المجموع:",
-                                "On remplace $v_0 = $v0$ et $q = $qTex$ :"
+                                "نعوّض \$v_0 = $v0\$ و \$q = $qTex\$ في صيغة المجموع:",
+                                "On remplace \$v_0 = $v0\$ et \$q = $qTex\$ :"
                             ),
                             latex = "S_n = $ansTex"
                         )
@@ -1313,24 +1313,24 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "constant",
                     prompt = LocalizedText(
-                        "نفترض أن المتتالية $(u_n)$ متقاربة. حدّد نهايتها $l$:",
-                        "On admet que $(u_n)$ est convergente. Déterminer sa limite $l$ :"
+                        "نفترض أن المتتالية \$(u_n)\$ متقاربة. حدّد نهايتها \$l\$:",
+                        "On admet que \$(u_n)\$ est convergente. Déterminer sa limite \$l\$ :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "حلّ المعادلة $f(l) = l$ ثم احتفظ بالحل المنتمي إلى $[0, +\\infty[$.",
-                            "Résolvez $f(l) = l$ puis gardez la solution dans $[0, +\\infty[$."
+                            "حلّ المعادلة \$f(l) = l\$ ثم احتفظ بالحل المنتمي إلى \$[0, +\\infty[\$.",
+                            "Résolvez \$f(l) = l\$ puis gardez la solution dans \$[0, +\\infty[\$."
                         )
                     ),
                     answerLatex = "$lRoot",
                     expectedAnswer = ExpectedAnswer.Finite(lRoot.toDouble()),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("حل المعادلة $f(l) = l$", "Résolution de $f(l) = l$"),
+                            title = LocalizedText("حل المعادلة \$f(l) = l\$", "Résolution de \$f(l) = l\$"),
                             explanation = LocalizedText(
-                                "نحل $l^2 - ${a}l - $b = 0 \\iff (l - $lRoot)(l + $negMag) = 0$ مع $l \\ge 0$:",
-                                "On résout $l^2 - ${a}l - $b = 0 \\iff (l - $lRoot)(l + $negMag) = 0$ avec $l \\ge 0$ :"
+                                "نحل \$l^2 - ${a}l - $b = 0 \\iff (l - $lRoot)(l + $negMag) = 0\$ مع \$l \\ge 0\$:",
+                                "On résout \$l^2 - ${a}l - $b = 0 \\iff (l - $lRoot)(l + $negMag) = 0\$ avec \$l \\ge 0\$ :"
                             ),
                             latex = "\\lim_{n \\to +\\infty} u_n = $lRoot"
                         )
@@ -1357,14 +1357,14 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "constant",
                     prompt = LocalizedText(
-                        "نفترض أن المتتالية $(u_n)$ متقاربة. حدّد نهايتها $l$ بالانتباه للمجال:",
-                        "On admet que $(u_n)$ est convergente. Déterminer sa limite $l$ en tenant compte de l'intervalle :"
+                        "نفترض أن المتتالية \$(u_n)\$ متقاربة. حدّد نهايتها \$l\$ بالانتباه للمجال:",
+                        "On admet que \$(u_n)\$ est convergente. Déterminer sa limite \$l\$ en tenant compte de l'intervalle :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "حلّ $f(l) = l$ واختر الجذر الوحيد المنتمي إلى $$intervalTex$.",
-                            "Résolvez $f(l) = l$ et retenez la racine appartenant à $$intervalTex$."
+                            "حلّ \$f(l) = l\$ واختر الجذر الوحيد المنتمي إلى \$$intervalTex\$.",
+                            "Résolvez \$f(l) = l\$ et retenez la racine appartenant à \$$intervalTex\$."
                         )
                     ),
                     answerLatex = "$expected",
@@ -1373,8 +1373,8 @@ internal object NewChaptersCasGenerators {
                         SolutionStep(
                             title = LocalizedText("اختيار الحل وفق المجال", "Sélection grâce à l'intervalle"),
                             explanation = LocalizedText(
-                                "الجذور هي $\\{$r1, $r2\\}$، والحل الوحيد داخل $$intervalTex$ هو:",
-                                "Les racines sont $\\{$r1, $r2\\}$ ; la seule dans $$intervalTex$ est :"
+                                "الجذور هي \$\\{$r1, $r2\\}\$، والحل الوحيد داخل \$$intervalTex\$ هو:",
+                                "Les racines sont \$\\{$r1, $r2\\}\$ ; la seule dans \$$intervalTex\$ est :"
                             ),
                             latex = "\\lim_{n \\to +\\infty} u_n = $expected"
                         )
@@ -1403,24 +1403,24 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "constant",
                     prompt = LocalizedText(
-                        "حدّد أصغر عدد صحيح طبيعي $n_0$ بحيث تتحقق المتراجحة لكل $n \\ge n_0$:",
-                        "Déterminer le plus petit entier naturel $n_0$ tel que l'inégalité soit vérifiée pour tout $n \\ge n_0$ :"
+                        "حدّد أصغر عدد صحيح طبيعي \$n_0\$ بحيث تتحقق المتراجحة لكل \$n \\ge n_0\$:",
+                        "Déterminer le plus petit entier naturel \$n_0\$ tel que l'inégalité soit vérifiée pour tout \$n \\ge n_0\$ :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "حوّل المتراجحة إلى الشكل $$b^n > $M$ ثم أوجد أصغر قوة لـ $$b$ أكبر قطعا من $$M$.",
-                            "Transformez l'inéquation en $$b^n > $M$ puis trouvez le plus petit $n_0$."
+                            "حوّل المتراجحة إلى الشكل \$$b^n > $M\$ ثم أوجد أصغر قوة لـ \$$b\$ أكبر قطعا من \$$M\$.",
+                            "Transformez l'inéquation en \$$b^n > $M\$ puis trouvez le plus petit \$n_0\$."
                         )
                     ),
                     answerLatex = "$targetN0",
                     expectedAnswer = ExpectedAnswer.Finite(targetN0.toDouble()),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("تحديد الرتبة $n_0$", "Détermination du rang seuil $n_0$"),
+                            title = LocalizedText("تحديد الرتبة \$n_0\$", "Détermination du rang seuil \$n_0\$"),
                             explanation = LocalizedText(
-                                "بما أن $$b^{${targetN0 - 1}} = $powPrev \\le $M < $powCurr = $b^{$targetN0}$:",
-                                "Comme $$b^{${targetN0 - 1}} = $powPrev \\le $M < $powCurr = $b^{$targetN0}$ :"
+                                "بما أن \$$b^{${targetN0 - 1}} = $powPrev \\le $M < $powCurr = $b^{$targetN0}\$:",
+                                "Comme \$$b^{${targetN0 - 1}} = $powPrev \\le $M < $powCurr = $b^{$targetN0}\$ :"
                             ),
                             latex = "n \\ge $targetN0 \\implies n_0 = $targetN0"
                         )
@@ -1467,21 +1467,21 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "constant",
                     prompt = LocalizedText(
-                        "المتتالية $(v_n)$ حسابية. احسب أساسها $r$:",
-                        "La suite $(v_n)$ est arithmétique. Calculer sa raison $r$ :"
+                        "المتتالية \$(v_n)\$ حسابية. احسب أساسها \$r\$:",
+                        "La suite \$(v_n)\$ est arithmétique. Calculer sa raison \$r\$ :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "احسب $v_{n+1} - v_n$ بتعويض $u_{n+1}$ وتبسيط المقلوب.",
-                            "Calculez $v_{n+1} - v_n$ en substituant $u_{n+1}$."
+                            "احسب \$v_{n+1} - v_n\$ بتعويض \$u_{n+1}\$ وتبسيط المقلوب.",
+                            "Calculez \$v_{n+1} - v_n\$ en substituant \$u_{n+1}\$."
                         )
                     ),
                     answerLatex = rTex,
                     expectedAnswer = ExpectedAnswer.Finite(pr.toDouble() / qr.toDouble()),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("حساب الأساس $r$", "Calcul de la raison $r$"),
+                            title = LocalizedText("حساب الأساس \$r\$", "Calcul de la raison \$r\$"),
                             explanation = LocalizedText("نجد بعد التبسيط:", "Après simplification :"),
                             latex = "v_{n+1} = v_n + $rTex \\implies r = $rTex"
                         )
@@ -1499,24 +1499,24 @@ internal object NewChaptersCasGenerators {
                 difficulty = diff,
                 answerKind = "expression_n",
                 prompt = LocalizedText(
-                    "علماً أن $(v_n)$ حسابية، عبّر عن $u_n$ بدلالة $n$:",
-                    "Sachant que $(v_n)$ est arithmétique, exprimer $u_n$ en fonction de $n$ :"
+                    "علماً أن \$(v_n)\$ حسابية، عبّر عن \$u_n\$ بدلالة \$n\$:",
+                    "Sachant que \$(v_n)\$ est arithmétique, exprimer \$u_n\$ en fonction de \$n\$ :"
                 ),
                 fullLimitLatex = sysTex,
                 hints = listOf(
                     LocalizedText(
-                        "أوجد $v_n = 1 + nr$ ثم استنتج $u_n = $alpha + \\frac{1}{v_n}$.",
-                        "Écrivez $v_n = 1 + nr$ puis déduisez $u_n = $alpha + \\frac{1}{v_n}$."
+                        "أوجد \$v_n = 1 + nr\$ ثم استنتج \$u_n = $alpha + \\frac{1}{v_n}\$.",
+                        "Écrivez \$v_n = 1 + nr\$ puis déduisez \$u_n = $alpha + \\frac{1}{v_n}\$."
                     )
                 ),
                 answerLatex = ansTex,
                 expectedAnswer = ExpectedAnswer.Finite(0.0),
                 steps = listOf(
                     SolutionStep(
-                        title = LocalizedText("تعبير $u_n$ بدلالة $n$", "Expression de $u_n$"),
+                        title = LocalizedText("تعبير \$u_n\$ بدلالة \$n\$", "Expression de \$u_n\$"),
                         explanation = LocalizedText(
-                            "لدينا $v_n = $vnTex$ ومنه $u_n = $alpha + \\frac{1}{v_n}$:",
-                            "On a $v_n = $vnTex$ d'où :"
+                            "لدينا \$v_n = $vnTex\$ ومنه \$u_n = $alpha + \\frac{1}{v_n}\$:",
+                            "On a \$v_n = $vnTex\$ d'où :"
                         ),
                         latex = "u_n = $ansTex"
                     )
@@ -1567,22 +1567,22 @@ internal object NewChaptersCasGenerators {
                 difficulty = diff,
                 answerKind = "constant",
                 prompt = LocalizedText(
-                    "المتتالية $(v_n)$ هندسية. احسب أساسها $q$:",
-                    "La suite $(v_n)$ est géométrique. Déterminer sa raison $q$ :"
+                    "المتتالية \$(v_n)\$ هندسية. احسب أساسها \$q\$:",
+                    "La suite \$(v_n)\$ est géométrique. Déterminer sa raison \$q\$ :"
                 ),
                 fullLimitLatex = sysTex,
                 hints = listOf(
                     LocalizedText(
-                        "احسب $v_{n+1} = \\frac{u_{n+1} - ($alpha)}{u_{n+1} - ($beta)}$ بتوحيد المقامين والاختزال.",
-                        "Calculez $v_{n+1} = \\frac{u_{n+1} - ($alpha)}{u_{n+1} - ($beta)}$ en simplifiant."
+                        "احسب \$v_{n+1} = \\frac{u_{n+1} - ($alpha)}{u_{n+1} - ($beta)}\$ بتوحيد المقامين والاختزال.",
+                        "Calculez \$v_{n+1} = \\frac{u_{n+1} - ($alpha)}{u_{n+1} - ($beta)}\$ en simplifiant."
                     )
                 ),
                 answerLatex = qTex,
                 expectedAnswer = ExpectedAnswer.Finite(pq.toDouble() / qq.toDouble()),
                 steps = listOf(
                     SolutionStep(
-                        title = LocalizedText("تعبير $v_{n+1}$ بدلالة $v_n$", "Calcul de $v_{n+1}$"),
-                        explanation = LocalizedText("بعد تعويض $u_{n+1}$ نجد:", "En substituant $u_{n+1}$, on obtient :"),
+                        title = LocalizedText("تعبير \$v_{n+1}\$ بدلالة \$v_n\$", "Calcul de \$v_{n+1}\$"),
+                        explanation = LocalizedText("بعد تعويض \$u_{n+1}\$ نجد:", "En substituant \$u_{n+1}\$, on obtient :"),
                         latex = "v_{n+1} = $qTex v_n \\implies q = $qTex"
                     )
                 ),
@@ -1603,24 +1603,24 @@ internal object NewChaptersCasGenerators {
                     difficulty = diff,
                     answerKind = "expression_n",
                     prompt = LocalizedText(
-                        "علماً أن $(v_n)$ هندسية، عبّر عن $u_n$ بدلالة $n$:",
-                        "Sachant que $(v_n)$ est géométrique, exprimer $u_n$ en fonction de $n$ :"
+                        "علماً أن \$(v_n)\$ هندسية، عبّر عن \$u_n\$ بدلالة \$n\$:",
+                        "Sachant que \$(v_n)\$ est géométrique, exprimer \$u_n\$ en fonction de \$n\$ :"
                     ),
                     fullLimitLatex = sysTex,
                     hints = listOf(
                         LocalizedText(
-                            "أوجد $v_n = v_0 q^n$ ثم اعزل $u_n = \\frac{\\alpha - \\beta v_n}{1 - v_n}$.",
-                            "Exprimez $v_n = v_0 q^n$ puis isolez $u_n = \\frac{\\alpha - \\beta v_n}{1 - v_n}$."
+                            "أوجد \$v_n = v_0 q^n\$ ثم اعزل \$u_n = \\frac{\\alpha - \\beta v_n}{1 - v_n}\$.",
+                            "Exprimez \$v_n = v_0 q^n\$ puis isolez \$u_n = \\frac{\\alpha - \\beta v_n}{1 - v_n}\$."
                         )
                     ),
                     answerLatex = ansTex,
                     expectedAnswer = ExpectedAnswer.Finite(0.0),
                     steps = listOf(
                         SolutionStep(
-                            title = LocalizedText("عزل $u_n$ بدلالة $v_n$ ثم $n$", "Isolement de $u_n$"),
+                            title = LocalizedText("عزل \$u_n\$ بدلالة \$v_n\$ ثم \$n\$", "Isolement de \$u_n\$"),
                             explanation = LocalizedText(
-                                "لدينا $v_n = $vnExprTex$ ومنه $u_n = \\frac{$alpha - ($beta)v_n}{1 - v_n}$:",
-                                "On a $v_n = $vnExprTex$ et $u_n = \\frac{$alpha - ($beta)v_n}{1 - v_n}$ :"
+                                "لدينا \$v_n = $vnExprTex\$ ومنه \$u_n = \\frac{$alpha - ($beta)v_n}{1 - v_n}\$:",
+                                "On a \$v_n = $vnExprTex\$ et \$u_n = \\frac{$alpha - ($beta)v_n}{1 - v_n}\$ :"
                             ),
                             latex = "u_n = $ansTex"
                         )
@@ -1635,24 +1635,24 @@ internal object NewChaptersCasGenerators {
                 difficulty = diff,
                 answerKind = "constant",
                 prompt = LocalizedText(
-                    "باستعمال $(v_n)$، احسب النهاية $\\lim_{n \\to +\\infty} u_n$:",
-                    "À l'aide de $(v_n)$, calculer $\\lim_{n \\to +\\infty} u_n$ :"
+                    "باستعمال \$(v_n)\$، احسب النهاية \$\\lim_{n \\to +\\infty} u_n\$:",
+                    "À l'aide de \$(v_n)\$, calculer \$\\lim_{n \\to +\\infty} u_n\$ :"
                 ),
                 fullLimitLatex = sysTex,
                 hints = listOf(
                     LocalizedText(
-                        "أوجد الأساس $q$؛ بما أن $|q| < 1$ فإن $v_n \\to 0$ ثم استنتج نهاية $u_n$.",
-                        "Comme $|q| < 1$, on a $v_n \\to 0$ puis déduisez la limite de $u_n$."
+                        "أوجد الأساس \$q\$؛ بما أن \$|q| < 1\$ فإن \$v_n \\to 0\$ ثم استنتج نهاية \$u_n\$.",
+                        "Comme \$|q| < 1\$, on a \$v_n \\to 0\$ puis déduisez la limite de \$u_n\$."
                     )
                 ),
                 answerLatex = "$alpha",
                 expectedAnswer = ExpectedAnswer.Finite(alpha.toDouble()),
                 steps = listOf(
                     SolutionStep(
-                        title = LocalizedText("استنتاج نهاية $(u_n)$", "Limite de $(u_n)$"),
+                        title = LocalizedText("استنتاج نهاية \$(u_n)\$", "Limite de \$(u_n)\$"),
                         explanation = LocalizedText(
-                            "بما أن $q = $qTex \\in ]0, 1[$ فإن $v_n \\to 0$، ومنه:",
-                            "Comme $q = $qTex \\in ]0, 1[$, $v_n \\to 0$, d'où :"
+                            "بما أن \$q = $qTex \\in ]0, 1[\$ فإن \$v_n \\to 0\$، ومنه:",
+                            "Comme \$q = $qTex \\in ]0, 1[\$, \$v_n \\to 0\$, d'où :"
                         ),
                         latex = "u_n = \\frac{$alpha - ($beta)v_n}{1 - v_n} \\xrightarrow[n \\to +\\infty]{} $alpha"
                     )
