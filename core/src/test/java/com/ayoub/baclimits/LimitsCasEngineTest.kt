@@ -50,8 +50,8 @@ class LimitsCasEngineTest {
         // Sequences expression in variable n
         assertTrue(MathExprEvaluator.isEquivalentExprN("2*(1/3)^n + 1", "1 + 2/3^n"))
         assertFalse(MathExprEvaluator.isEquivalentExprN("2*(1/3)^n + 1", "2*(1/2)^n + 1"))
-        assertTrue(MathExprEvaluator.validateSyntax("2*(1/3)^n + 1", "expression_n"))
-        assertFalse(MathExprEvaluator.validateSyntax("2*(((", "expression_n"))
+        assertTrue(MathExprEvaluator.validateSyntax("2*(1/3)^n + 1", "expression_n") is EvalResult.Finite)
+        assertTrue(MathExprEvaluator.validateSyntax("2*(((", "expression_n") is EvalResult.Invalid)
     }
 
     @Test
